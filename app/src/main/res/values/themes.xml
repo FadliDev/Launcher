@@ -1,8 +1,11 @@
-<?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="Theme.Ember" parent="android:Theme.Material.NoActionBar">
-        <item name="android:windowBackground">#0F1115</item>
-        <item name="android:statusBarColor">#0F1115</item>
-        <item name="android:navigationBarColor">#0F1115</item>
+    <style name="Theme.SallyTextEditor" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="colorPrimary">#6750A4</item>
+        <item name="colorSecondary">#625B71</item>
+        <item name="android:fontFamily">sans</item>
+        <item name="android:windowLightStatusBar">?attr/isLightTheme</item>
+        <item name="android:navigationBarColor">?attr/colorSurface</item>
+        <item name="android:statusBarColor">?attr/colorSurface</item>
+        <item name="android:windowActionModeOverlay">true</item>
     </style>
 </resources>
