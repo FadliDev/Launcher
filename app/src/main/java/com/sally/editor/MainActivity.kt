@@ -115,9 +115,10 @@ class MainActivity : AppCompatActivity() {
                     if (!suppressDirty) dirty = true
                     updateStatus()
                     lineNumbers.lineCount = (s?.count { it == '\n' } ?: 0) + 1
-                    if (s != null && s.isNotEmpty()) SyntaxHighlighter.apply(s)
                 }
-                override fun afterTextChanged(s: Editable?) {}
+                override fun afterTextChanged(s: Editable?) {
+                    if (s != null) SyntaxHighlighter.apply(s)
+                }
             })
         }
         editorArea.addView(lineNumbers, LinearLayout.LayoutParams(dp(42), -1))
