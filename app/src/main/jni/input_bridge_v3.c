@@ -384,12 +384,24 @@ void critical_send_cursor_pos(jfloat x, jfloat y) {
         }
 
         if (!pojav_environ->isUseStackQueueCall) {
+            // Keep the native copy in sync too, so the Java side can read back where the game thinks the cursor is.
+            pojav_environ->cursorX = pojav_environ->cLastX = x;
+            pojav_environ->cursorY = pojav_environ->cLastY = y;
             pojav_environ->GLFW_invoke_CursorPos((void*) pojav_environ->showingWindow, (double) (x), (double) (y));
         } else {
             pojav_environ->cursorX = x;
             pojav_environ->cursorY = y;
         }
     }
+}
+
+/* The game can move the cursor itself (glfwSetCursorPos, e.g. recentre when a menu opens). The launcher UI reads it back
+ * so the drawn pointer and the position clicks land on are always the same. */
+JNIEXPORT jfloat JNICALL Java_org_lwjgl_glfw_CallbackBridge_nativeGetCursorX(__attribute__((unused)) JNIEnv* env, __attribute__((unused)) jclass clazz) {
+    return (jfloat) pojav_environ->cursorX;
+}
+JNIEXPORT jfloat JNICALL Java_org_lwjgl_glfw_CallbackBridge_nativeGetCursorY(__attribute__((unused)) JNIEnv* env, __attribute__((unused)) jclass clazz) {
+    return (jfloat) pojav_environ->cursorY;
 }
 
 void noncritical_send_cursor_pos(__attribute__((unused)) JNIEnv* env, __attribute__((unused)) jclass clazz,  jfloat x, jfloat y) {

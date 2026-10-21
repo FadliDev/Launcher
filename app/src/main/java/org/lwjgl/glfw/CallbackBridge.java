@@ -41,6 +41,15 @@ public class CallbackBridge {
     }
 
 
+    /** Pulls the cursor position the game currently has (it may have recentred it itself) into [mouseX]/[mouseY]. */
+    public static void syncCursorFromGame() {
+        float x = nativeGetCursorX(), y = nativeGetCursorY();
+        if (Float.isNaN(x) || Float.isNaN(y)) return;
+        int w = windowWidth, h = windowHeight;
+        mouseX = w > 0 ? Math.max(0f, Math.min(x, w - 1)) : x;
+        mouseY = h > 0 ? Math.max(0f, Math.min(y, h - 1)) : y;
+    }
+
     public static void sendCursorPos(float x, float y) {
         mouseX = x;
         mouseY = y;
@@ -208,6 +217,8 @@ public class CallbackBridge {
     @Keep @CriticalNative private static native void nativeSendScreenSize(int width, int height);
     @Keep public static native void nativeSetWindowAttrib(int attrib, int value);
     @Keep public static native int getCurrentFps();
+    @Keep private static native float nativeGetCursorX();
+    @Keep private static native float nativeGetCursorY();
 
     static {
         System.loadLibrary("pojavexec");

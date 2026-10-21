@@ -1,7 +1,6 @@
 package com.sally.ember.game
 
 import android.app.Activity
-import android.content.Intent
 import android.graphics.Color
 import android.os.Bundle
 import android.os.Handler
@@ -76,7 +75,7 @@ class GameActivity : Activity(), SurfaceHolder.Callback {
         root.addView(TextView(this).apply {
             text = "LOG"; setTextColor(Color.WHITE); setPadding(24, 12, 24, 12); setBackgroundColor(Color.argb(120, 0, 0, 0))
             setOnClickListener { logVisible = !logVisible; applyLogVisibility() }
-        }, FrameLayout.LayoutParams(FrameLayout.LayoutParams.WRAP_CONTENT, FrameLayout.LayoutParams.WRAP_CONTENT, Gravity.TOP or Gravity.END))
+        }, FrameLayout.LayoutParams(FrameLayout.LayoutParams.WRAP_CONTENT, FrameLayout.LayoutParams.WRAP_CONTENT, Gravity.TOP or Gravity.START))
 
         ExitReporter.onExit = { code, sig -> runOnUiThread { onJvmExit("JVM exit code=$code${if (sig) " (signal)" else ""}") } }
         setContentView(root)
@@ -84,47 +83,6 @@ class GameActivity : Activity(), SurfaceHolder.Callback {
         applyLogVisibility()
         CallbackBridge.addGrabListener(grabListener)
         tailLog()
-    }
-
-    // Never leave a key or mouse button stuck down when the app loses focus (notification shade, app switch, screen off).
-    override fun onResume() {
-        super.onResume()
-        if (::controls.isInitialized) controls.onHostResume()
-    }
-
-    override fun onPause() {
-        if (::controls.isInitialized) controls.onHostPause()
-        super.onPause()
-    }
-
-    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
-        if (::controls.isInitialized) {
-            val fromPhysicalKeyboard = (event.source and InputDevice.SOURCE_KEYBOARD) == InputDevice.SOURCE_KEYBOARD
-            // Leave typed text to the focused IME field while the software keyboard is open.
-            if (!(kbOn && fromPhysicalKeyboard) && controls.onHardwareKey(event)) return true
-        }
-        return super.dispatchKeyEvent(event)
-    }
-
-    override fun dispatchGenericMotionEvent(event: android.view.MotionEvent): Boolean {
-        if (::controls.isInitialized && controls.onHardwareMotion(event)) return true
-        return super.dispatchGenericMotionEvent(event)
-    }
-
-    @Deprecated("Deprecated in Android")
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode == TouchControls.REQUEST_IMPORT && resultCode == RESULT_OK) {
-            data?.data?.let { uri -> if (::controls.isInitialized) controls.importProfile(uri) }
-        }
-    }
-
-    override fun onWindowFocusChanged(hasFocus: Boolean) {
-        super.onWindowFocusChanged(hasFocus)
-        if (::controls.isInitialized) {
-            controls.onHostWindowFocus(hasFocus)
-            if (!hasFocus) controls.releaseAll()
-        }
     }
 
     override fun onDestroy() {
