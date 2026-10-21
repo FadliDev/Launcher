@@ -43,16 +43,19 @@ Tujuan: pastikan ide ini feasible sebelum bangun UI besar.
 **Rilis:** `v0.1` — editor teks yang enak dipakai.
 
 ## Fase 2 — Proyek & file explorer (2–3 minggu)
-- [ ] Buka folder proyek (SAF atau storage app)
-- [ ] Sidebar tree file explorer + icon per tipe file
-- [ ] Buat/rename/hapus/duplikat/pindah, multi-select
-- [ ] Pencarian file (fuzzy) + cari teks seluruh proyek
-- [ ] Import/export zip
-- [ ] Proyek terakhir, workspace restore (tab terbuka)
-- [ ] Layout adaptif: HP, tablet, landscape
-- [ ] Template proyek (Android Kotlin, Java, Fabric dulu)
+- [x] Buka folder proyek (storage internal app: `files/projects/<nama>`)
+- [ ] Buka folder proyek dari penyimpanan luar lewat SAF
+- [x] Sidebar tree file explorer + icon/warna per tipe file
+- [x] Buat/rename/hapus/duplikat (long-press menu)
+- [ ] Pindah file, drag & drop, multi-select
+- [x] Pencarian file (fuzzy) + cari teks seluruh proyek (klik hasil lompat ke baris)
+- [x] Import/export zip (proteksi zip-slip, batas ukuran)
+- [x] Proyek terakhir, workspace restore (tab terbuka + proyek aktif)
+- [x] Layout adaptif: drawer di HP, sidebar tetap di layar ≥ 720dp
+- [ ] Divider sidebar/panel bawah yang bisa digeser
+- [x] Template proyek (Android Kotlin, Android Java, Mod Fabric, kosong)
 
-**Rilis:** `v0.2`.
+**Rilis:** `v0.2` (versi 0.2.0 di `app/build.gradle.kts`).
 
 ## Fase 3 — SDK & toolchain manager (2–3 minggu)
 - [ ] Layar "Toolchain": JDK, Gradle, SDK, build-tools, NDK

@@ -49,6 +49,8 @@ import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Done
+import androidx.compose.material.icons.filled.Folder
+import androidx.compose.material.icons.filled.FileUpload
 import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.InsertDriveFile
@@ -82,12 +84,14 @@ import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.rememberDrawerState
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -113,6 +117,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -126,11 +131,18 @@ import io.github.rosemoe.sora.event.SelectionChangeEvent
 import io.github.rosemoe.sora.langs.textmate.TextMateColorScheme
 import io.github.rosemoe.sora.widget.CodeEditor
 import com.sally.ide.data.EditorDocument
+import com.sally.ide.data.ProjectManager
+import com.sally.ide.data.ProjectTemplate
+import com.sally.ide.ui.explorer.ExplorerHost
+import com.sally.ide.ui.explorer.ExplorerPanel
+import com.sally.ide.ui.explorer.NewProjectDialog
+import com.sally.ide.ui.explorer.ProjectSearchDialog
 import com.sally.ide.data.SnippetManager
 import com.sally.ide.data.SnippetManager.Snippet
 import com.sally.ide.editor.TextMateSupport
 import com.sally.ide.ui.theme.SallyTheme
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -174,6 +186,16 @@ private fun SallyIDEApp() {
     var prefix by remember { mutableStateOf("") }
     var lineNumber by remember { mutableIntStateOf(1) }
     var columnNumber by remember { mutableIntStateOf(1) }
+    var projectDir by remember { mutableStateOf<File?>(null) }
+    var projects by remember { mutableStateOf<List<File>>(emptyList()) }
+    var explorerTick by remember { mutableIntStateOf(0) }
+    var showNewProject by remember { mutableStateOf(false) }
+    var showProjectSearch by remember { mutableStateOf(false) }
+    var projectToDelete by remember { mutableStateOf<File?>(null) }
+    var pendingJump by remember { mutableStateOf<Pair<String, Int>?>(null) }
+    var restoreDone by remember { mutableStateOf(false) }
+    val drawerState = rememberDrawerState(DrawerValue.Closed)
+    val wide = LocalConfiguration.current.screenWidthDp >= 720
     val completionSuggestions = remember(prefix, snippets, activeDoc?.name, activeDoc?.content) {
         buildCompletionSuggestions(prefix, activeDoc?.name.orEmpty(), activeDoc?.content.orEmpty(), snippets)
     }
@@ -187,7 +209,7 @@ private fun SallyIDEApp() {
 
     fun createNewDocument(rawName: String, content: String = "") {
         val safeName = rawName.trim().ifBlank { "Untitled.txt" }.replace("/", "_").replace("\\", "_")
-        val workspace = File(context.filesDir, "workspace").apply { mkdirs() }
+        val workspace = (projectDir ?: File(context.filesDir, "workspace")).apply { mkdirs() }
         var target = File(workspace, safeName)
         var suffix = 1
         while (target.exists()) {
@@ -203,6 +225,119 @@ private fun SallyIDEApp() {
         screen = AppScreen.EDITOR
         showNewFile = false
         newFileName = "Main.kt"
+        explorerTick++
+    }
+
+    fun refreshProjects() {
+        projects = ProjectManager.listProjects(context, prefs)
+    }
+
+    fun openProject(dir: File) {
+        projectDir = dir
+        ProjectManager.touchRecent(prefs, dir.name)
+        refreshProjects()
+        screen = AppScreen.EDITOR
+        if (!wide && documents.none { it.localPath?.startsWith(dir.absolutePath + File.separator) == true }) {
+            scope.launch { delay(200); drawerState.open() }
+        }
+    }
+
+    fun openProjectFile(file: File, line: Int? = null) {
+        val existing = documents.firstOrNull { it.localPath == file.absolutePath }
+        if (existing != null) {
+            activeId = existing.id
+            screen = AppScreen.EDITOR
+            if (line != null) pendingJump = existing.id to line
+            scope.launch { drawerState.close() }
+            return
+        }
+        scope.launch {
+            val text = withContext(Dispatchers.IO) { ProjectManager.readTextSafe(file) }
+            if (text == null) {
+                snackbar.showSnackbar("${file.name} tidak bisa dibuka (biner atau lebih dari 2 MB)")
+                return@launch
+            }
+            val doc = EditorDocument(id = file.absolutePath, name = file.name, content = text, savedContent = text, localPath = file.absolutePath)
+            documents.add(doc)
+            activeId = doc.id
+            screen = AppScreen.EDITOR
+            if (line != null) pendingJump = doc.id to line
+            drawerState.close()
+        }
+    }
+
+    fun handleRenamed(old: File, renamed: File) {
+        val oldPath = old.absolutePath
+        for (i in documents.indices) {
+            val d = documents[i]
+            val lp = d.localPath ?: continue
+            if (lp == oldPath || lp.startsWith(oldPath + File.separator)) {
+                val newPath = renamed.absolutePath + lp.removePrefix(oldPath)
+                documents[i] = d.copy(localPath = newPath, name = File(newPath).name)
+            }
+        }
+    }
+
+    fun handleDeleted(target: File) {
+        val path = target.absolutePath
+        documents.removeAll { d ->
+            val lp = d.localPath
+            lp != null && (lp == path || lp.startsWith(path + File.separator))
+        }
+        if (documents.none { it.id == activeId }) activeId = documents.lastOrNull()?.id
+    }
+
+    fun createProject(template: ProjectTemplate, name: String, pkg: String) {
+        scope.launch {
+            val result = withContext(Dispatchers.IO) { runCatching { ProjectManager.createProject(context, template, name, pkg) } }
+            result.onSuccess { dir ->
+                showNewProject = false
+                openProject(dir)
+            }.onFailure { snackbar.showSnackbar("Gagal membuat proyek: ${it.message}") }
+        }
+    }
+
+    fun deleteProject(dir: File) {
+        scope.launch {
+            val ok = withContext(Dispatchers.IO) { ProjectManager.deleteProject(dir) }
+            if (ok) {
+                handleDeleted(dir)
+                if (projectDir == dir) projectDir = null
+                refreshProjects()
+            } else snackbar.showSnackbar("Gagal menghapus proyek")
+        }
+    }
+
+    val exportZipLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/zip")) { uri ->
+        val dir = projectDir
+        if (uri != null && dir != null) {
+            scope.launch {
+                val ok = withContext(Dispatchers.IO) {
+                    runCatching {
+                        val output = context.contentResolver.openOutputStream(uri) ?: error("Provider tidak membuka output stream")
+                        output.use { ProjectManager.exportZip(dir, it) }
+                        true
+                    }.getOrDefault(false)
+                }
+                snackbar.showSnackbar(if (ok) "Proyek diekspor ke ZIP" else "Gagal mengekspor proyek")
+            }
+        }
+    }
+
+    val importZipLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) {
+            scope.launch {
+                val hint = uri.lastPathSegment?.substringAfterLast('/')?.takeIf { it.isNotBlank() } ?: "Proyek Import"
+                val result = withContext(Dispatchers.IO) {
+                    runCatching {
+                        val input = context.contentResolver.openInputStream(uri) ?: error("Provider tidak membuka file")
+                        input.use { ProjectManager.importZip(context, it, hint) }
+                    }
+                }
+                result.onSuccess { dir -> openProject(dir) }
+                    .onFailure { snackbar.showSnackbar("Gagal import ZIP: ${it.message}") }
+            }
+        }
     }
 
     fun addOpenedDocument(uri: Uri, content: String) {
@@ -292,6 +427,54 @@ private fun SallyIDEApp() {
         }
     }
 
+    LaunchedEffect(Unit) {
+        val lastProject = prefs.getString("last_project", null)
+        val tabPaths = prefs.getString("open_tabs", "").orEmpty().split('\n').filter { it.isNotBlank() }
+        val activePath = prefs.getString("active_tab", null)
+        val loaded = withContext(Dispatchers.IO) {
+            val dir = lastProject?.let { File(it) }?.takeIf { it.isDirectory }
+            val docs = tabPaths.mapNotNull { path ->
+                val file = File(path)
+                val text = if (file.isFile) ProjectManager.readTextSafe(file) else null
+                if (text == null) null else EditorDocument(id = path, name = file.name, content = text, savedContent = text, localPath = path)
+            }
+            Triple(dir, docs, ProjectManager.listProjects(context, prefs))
+        }
+        projects = loaded.third
+        if (documents.isEmpty()) {
+            projectDir = loaded.first
+            documents.addAll(loaded.second)
+            if (documents.isNotEmpty()) {
+                activeId = documents.firstOrNull { it.localPath == activePath }?.id ?: documents.last().id
+                screen = AppScreen.EDITOR
+            } else if (loaded.first != null && screen == AppScreen.EDITOR) {
+                activeId = null
+            }
+        }
+        restoreDone = true
+    }
+
+    LaunchedEffect(documents.map { it.localPath }, activeId, projectDir, restoreDone) {
+        if (restoreDone) {
+            prefs.edit {
+                putString("open_tabs", documents.mapNotNull { it.localPath }.joinToString("\n"))
+                putString("active_tab", documents.firstOrNull { it.id == activeId }?.localPath)
+                putString("last_project", projectDir?.absolutePath)
+            }
+        }
+    }
+
+    LaunchedEffect(editorRef, pendingJump, activeId) {
+        val jump = pendingJump
+        val editor = editorRef
+        val doc = activeDoc
+        if (jump != null && editor != null && doc != null && jump.first == doc.id && editor.text.toString() == doc.content) {
+            val line = jump.second.coerceIn(0, (editor.text.lineCount - 1).coerceAtLeast(0))
+            editor.setSelection(line, 0, true)
+            pendingJump = null
+        }
+    }
+
     LaunchedEffect(activeDoc?.name) {
         val doc = activeDoc
         if (doc == null) {
@@ -306,6 +489,34 @@ private fun SallyIDEApp() {
     }
 
     SallyTheme(darkTheme = darkTheme, dynamicColor = dynamicColor, amoled = amoled) {
+        val explorerDir = projectDir
+        ExplorerHost(
+            wide = wide,
+            enabled = explorerDir != null && screen == AppScreen.EDITOR,
+            drawerState = drawerState,
+            drawerContent = {
+                if (explorerDir != null) {
+                    ExplorerPanel(
+                        projectDir = explorerDir,
+                        refreshTick = explorerTick,
+                        activePath = activeDoc?.localPath,
+                        dirtyPaths = documents.filter { it.isDirty }.mapNotNull { it.localPath }.toSet(),
+                        onOpenFile = { openProjectFile(it) },
+                        onRenamed = { old, renamed -> handleRenamed(old, renamed) },
+                        onDeleted = { handleDeleted(it) },
+                        onChanged = { explorerTick++ },
+                        onMessage = { msg -> scope.launch { snackbar.showSnackbar(msg) } },
+                        onSearch = { showProjectSearch = true },
+                        onExport = { exportZipLauncher.launch(explorerDir.name + ".zip") },
+                        onCloseProject = {
+                            projectDir = null
+                            screen = AppScreen.HOME
+                            refreshProjects()
+                        }
+                    )
+                }
+            }
+        ) {
         Scaffold(
             snackbarHost = { SnackbarHost(snackbar) },
             topBar = {
@@ -342,6 +553,9 @@ private fun SallyIDEApp() {
                         }
                     },
                     actions = {
+                        if (screen == AppScreen.EDITOR && projectDir != null && !wide) {
+                            IconButton(onClick = { scope.launch { drawerState.open() } }) { Icon(Icons.Default.Folder, "Explorer") }
+                        }
                         if (screen == AppScreen.EDITOR && activeDoc != null) {
                             IconButton(onClick = { saveDocument(activeDoc) }) {
                                 Icon(Icons.Default.Save, "Simpan")
@@ -356,6 +570,9 @@ private fun SallyIDEApp() {
                                 IconButton(onClick = { showMore = true }) { Icon(Icons.Default.MoreVert, "Menu editor") }
                                 DropdownMenu(expanded = showMore, onDismissRequest = { showMore = false }) {
                                     DropdownMenuItem(text = { Text("Cari & ganti") }, leadingIcon = { Icon(Icons.Default.Search, null) }, onClick = { showMore = false; showFindReplace = true })
+                                    if (projectDir != null) {
+                                        DropdownMenuItem(text = { Text("Cari di proyek") }, leadingIcon = { Icon(Icons.Default.Search, null) }, onClick = { showMore = false; showProjectSearch = true })
+                                    }
                                     DropdownMenuItem(text = { Text("Snippet") }, leadingIcon = { Icon(Icons.Default.SnippetFolder, null) }, onClick = { showMore = false; showSnippets = true })
                                     DropdownMenuItem(text = { Text("Simpan sebagai…") }, leadingIcon = { Icon(Icons.Default.Save, null) }, onClick = { showMore = false; saveDocument(activeDoc, asCopy = true) })
                                     DropdownMenuItem(text = { Text("Pengaturan") }, leadingIcon = { Icon(Icons.Default.Settings, null) }, onClick = { showMore = false; screenBeforeSettings = screen; screen = AppScreen.SETTINGS })
@@ -419,7 +636,13 @@ private fun SallyIDEApp() {
                             }
                         }
                         EditorNavigationBar(
-                            onFiles = { screen = AppScreen.HOME },
+                            onFiles = {
+                                if (projectDir == null) {
+                                    screen = AppScreen.HOME
+                                } else if (!wide) {
+                                    scope.launch { drawerState.open() }
+                                }
+                            },
                             onSearch = { showFindReplace = true },
                             onSnippets = { showSnippets = true },
                             onBuild = { scope.launch { snackbar.showSnackbar("Build Gradle di HP masuk fase toolchain berikutnya.") } },
@@ -442,6 +665,11 @@ private fun SallyIDEApp() {
                 AppScreen.HOME -> HomeScreen(
                     modifier = Modifier.padding(padding),
                     documents = documents,
+                    projects = projects,
+                    onNewProject = { showNewProject = true },
+                    onImportZip = { importZipLauncher.launch(arrayOf("application/zip", "application/x-zip-compressed", "application/octet-stream")) },
+                    onOpenProject = { openProject(it) },
+                    onDeleteProject = { projectToDelete = it },
                     onNewFile = { newFileName = it; showNewFile = true },
                     onOpen = { openFileLauncher.launch(arrayOf("*/*")) },
                     onOpenDocument = { doc -> activeId = doc.id; screen = AppScreen.EDITOR },
@@ -488,6 +716,30 @@ private fun SallyIDEApp() {
                 )
             }
         }
+        }
+    }
+
+    if (showNewProject) {
+        NewProjectDialog(onDismiss = { showNewProject = false }, onCreate = { t, n, p -> createProject(t, n, p) })
+    }
+
+    val searchDir = projectDir
+    if (showProjectSearch && searchDir != null) {
+        ProjectSearchDialog(
+            projectDir = searchDir,
+            onDismiss = { showProjectSearch = false },
+            onOpen = { file, line -> showProjectSearch = false; openProjectFile(file, line) }
+        )
+    }
+
+    projectToDelete?.let { target ->
+        AlertDialog(
+            onDismissRequest = { projectToDelete = null },
+            title = { Text("Hapus proyek ${target.name}?") },
+            text = { Text("Seluruh isi proyek akan dihapus permanen dari penyimpanan aplikasi. Ekspor ZIP dulu kalau perlu cadangan.") },
+            confirmButton = { Button(onClick = { projectToDelete = null; deleteProject(target) }) { Text("Hapus") } },
+            dismissButton = { TextButton(onClick = { projectToDelete = null }) { Text("Batal") } }
+        )
     }
 
     if (showNewFile) {
@@ -564,6 +816,11 @@ private fun SallyIDEApp() {
 private fun HomeScreen(
     modifier: Modifier,
     documents: List<EditorDocument>,
+    projects: List<File>,
+    onNewProject: () -> Unit,
+    onImportZip: () -> Unit,
+    onOpenProject: (File) -> Unit,
+    onDeleteProject: (File) -> Unit,
     onNewFile: (String) -> Unit,
     onOpen: () -> Unit,
     onOpenDocument: (EditorDocument) -> Unit,
@@ -598,6 +855,23 @@ private fun HomeScreen(
                     }
                 }
             }
+        }
+        Spacer(Modifier.height(24.dp))
+        Text("Proyek", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+        Spacer(Modifier.height(8.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            FilledTonalButton(onClick = onNewProject, modifier = Modifier.weight(1f)) {
+                Icon(Icons.Default.Add, null, Modifier.size(18.dp)); Spacer(Modifier.width(6.dp)); Text("Proyek baru")
+            }
+            OutlinedButton(onClick = onImportZip, modifier = Modifier.weight(1f)) {
+                Icon(Icons.Default.FileUpload, null, Modifier.size(18.dp)); Spacer(Modifier.width(6.dp)); Text("Import ZIP")
+            }
+        }
+        Spacer(Modifier.height(8.dp))
+        if (projects.isEmpty()) {
+            Text("Belum ada proyek. Buat dari template Android Kotlin, Android Java, atau Mod Fabric.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        } else {
+            projects.forEach { dir -> ProjectRow(dir, onClick = { onOpenProject(dir) }, onDelete = { onDeleteProject(dir) }) }
         }
         Spacer(Modifier.height(24.dp))
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
@@ -650,6 +924,21 @@ private fun TemplateCard(title: String, fileName: String, body: String, badge: S
             }
             Icon(Icons.Default.ArrowForward, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
         }
+    }
+}
+
+@Composable
+private fun ProjectRow(dir: File, onClick: () -> Unit, onDelete: () -> Unit) {
+    Row(
+        Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).clickable(onClick = onClick).padding(start = 8.dp, top = 6.dp, bottom = 6.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Surface(shape = RoundedCornerShape(10.dp), color = MaterialTheme.colorScheme.primaryContainer, modifier = Modifier.size(40.dp)) {
+            Box(contentAlignment = Alignment.Center) { Icon(Icons.Default.Folder, null, tint = MaterialTheme.colorScheme.onPrimaryContainer) }
+        }
+        Spacer(Modifier.width(12.dp))
+        Text(dir.name, Modifier.weight(1f), fontWeight = FontWeight.Medium, maxLines = 1)
+        IconButton(onClick = onDelete) { Icon(Icons.Default.Delete, "Hapus proyek ${dir.name}", tint = MaterialTheme.colorScheme.onSurfaceVariant) }
     }
 }
 

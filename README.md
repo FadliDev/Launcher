@@ -1,4 +1,4 @@
-# Sally IDE — MVP Android
+# Sally IDE — Android (v0.2)
 
 Sally IDE adalah editor kode Android berorientasi layar HP, menggunakan Kotlin, Jetpack Compose Material 3, dan Sora Editor. Rancangan proyek lengkap yang menjadi acuan ada di direktori [`docs/`](docs/).
 
@@ -13,9 +13,18 @@ Sally IDE adalah editor kode Android berorientasi layar HP, menggunakan Kotlin, 
 - Tema Light/Dark, Dynamic Color Android 12+, dan mode hitam AMOLED.
 - GitHub Actions untuk membuat APK debug dan mengunggahnya sebagai artifact.
 
+### Baru di v0.2 (Fase 2)
+
+- Proyek disimpan di penyimpanan internal aplikasi (`files/projects/`), lengkap dengan daftar proyek di Home.
+- Template proyek: Android Kotlin (Compose), Android Java (View), Mod Fabric, dan proyek kosong. Versi plugin/dependency ada di file `gradle.properties`/root build milik proyek.
+- File explorer berbentuk tree (drawer di HP, sidebar tetap di layar lebar ≥ 720dp): buat, ganti nama, hapus, dan duplikat file/folder lewat long-press.
+- Cari di proyek: nama file (fuzzy) dan isi teks, hasil bisa diklik untuk lompat ke baris.
+- Import/export ZIP proyek (folder `build/` dan `.gradle/` tidak ikut diekspor).
+- Workspace restore: proyek aktif dan tab terbuka dipulihkan saat aplikasi dibuka lagi.
+
 ## Batasan tahap ini
 
-MVP ini **belum** menjalankan Gradle untuk membangun aplikasi Android dari dalam ponsel. Project explorer berbentuk tree, template proyek lengkap, SDK/NDK manager, terminal, LSP penuh, dan build APK di perangkat direncanakan pada fase berikutnya sesuai `docs/ROADMAP.md`. Grammar yang dibundel merupakan grammar TextMate dasar, belum grammar vendor penuh yang sekomplet VS Code.
+MVP ini **belum** menjalankan Gradle untuk membangun aplikasi Android dari dalam ponsel. Pindah file/drag & drop, buka folder luar lewat SAF, SDK/NDK manager, terminal, LSP penuh, dan build APK di perangkat direncanakan pada fase berikutnya sesuai `docs/ROADMAP.md`. Grammar yang dibundel merupakan grammar TextMate dasar, belum grammar vendor penuh yang sekomplet VS Code.
 
 ## Build lewat GitHub Actions
 
