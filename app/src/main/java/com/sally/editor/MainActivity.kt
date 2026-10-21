@@ -117,7 +117,7 @@ class MainActivity : AppCompatActivity() {
                     lineNumbers.lineCount = (s?.count { it == '\n' } ?: 0) + 1
                 }
                 override fun afterTextChanged(s: Editable?) {
-                    if (s != null) SyntaxHighlighter.apply(s)
+                    if (s != null) SyntaxHighlighter.apply(s, currentName)
                 }
             })
         }
@@ -199,6 +199,7 @@ class MainActivity : AppCompatActivity() {
             editor.setSelection(editor.text.length)
             dirty = false
             filename.text = currentName
+            SyntaxHighlighter.apply(editor.text, currentName)
             updateStatus()
             toast("Opened $currentName")
         } catch (e: Exception) {
@@ -223,6 +224,7 @@ class MainActivity : AppCompatActivity() {
             currentUri = uri
             currentName = uri.lastPathSegment?.substringAfterLast('/')?.takeIf { it.isNotBlank() } ?: currentName
             filename.text = currentName
+            SyntaxHighlighter.apply(editor.text, currentName)
             dirty = false
             updateStatus()
             toast("Saved successfully")
