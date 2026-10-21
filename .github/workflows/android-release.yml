@@ -30,13 +30,7 @@ jobs:
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
         with:
-          packages: |
-            platform-tools
-            platforms;android-35
-            build-tools;35.0.0
-
-      - name: Accept Android SDK licenses
-        run: yes | sdkmanager --licenses >/dev/null
+          packages: platform-tools platforms;android-35 build-tools;35.0.0
 
       - name: Set up Gradle 8.9
         uses: gradle/actions/setup-gradle@v4
@@ -67,7 +61,13 @@ jobs:
           test -f "$APK"
           BUILD_TOOLS="$ANDROID_HOME/build-tools/35.0.0"
           "$BUILD_TOOLS/zipalign" -f -p 4 "$APK" "$RUNNER_TEMP/sally-aligned.apk"
-          "$BUILD_TOOLS/apksigner" sign             --ks "$RUNNER_TEMP/sally-release.jks"             --ks-key-alias "$KEY_ALIAS"             --ks-pass "pass:$KEYSTORE_PASSWORD"             --key-pass "pass:$KEY_PASSWORD"             --out SallyLauncher-release.apk             "$RUNNER_TEMP/sally-aligned.apk"
+          "$BUILD_TOOLS/apksigner" sign \
+            --ks "$RUNNER_TEMP/sally-release.jks" \
+            --ks-key-alias "$KEY_ALIAS" \
+            --ks-pass "pass:$KEYSTORE_PASSWORD" \
+            --key-pass "pass:$KEY_PASSWORD" \
+            --out SallyLauncher-release.apk \
+            "$RUNNER_TEMP/sally-aligned.apk"
           "$BUILD_TOOLS/apksigner" verify --verbose SallyLauncher-release.apk
 
       - name: Prepare unsigned APK for release if signing secrets are absent
