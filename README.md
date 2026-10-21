@@ -1,21 +1,24 @@
-# Sally Text Editor — crash fix + code-editor engine patch
+# Sally Text Editor — Friendly Snippets + LSP groundwork patch
 
-Patch ini mengganti editor `EditText` dan highlighter regex buatan sendiri dengan **Sora Editor** (`io.github.Rosemoe.sora-editor`) dan dukungan grammar **TextMate**. Perubahan disimpan sebagai file patch saja; salin/merge isi ZIP ke root repo, lalu push agar GitHub Actions membangun APK.
+This is a changed-files-only patch for the existing Sally Text Editor repository. Merge the ZIP into the repository root and preserve relative paths.
 
-## Yang berubah
+## Snippets
 
-- Menghapus jalur highlighting penuh yang berjalan setiap perubahan teks dan menggantinya dengan syntax analysis incremental Sora Editor. Ini ditujukan untuk mengatasi crash saat mengetik pada implementasi sebelumnya.
-- Menambahkan popup autocomplete berbasis identifier dari TextMate serta snippet yang disesuaikan ekstensi file.
-- Tombol **Snippets** untuk memilih template HTML, CSS, JavaScript/TypeScript, Python, Java/Kotlin, C/C++, shell, JSON, SQL, dan XML.
-- Memakai fitur editor Sora untuk auto-indent, pasangan bracket, undo/redo, selection, dan editor code view.
-- Tetap memakai file picker Android untuk Open/Save.
+- Uses the upstream Friendly Snippets VS Code-compatible JSON collection instead of maintaining a hardcoded per-language snippet list in `MainActivity.kt`.
+- Gradle fetches Friendly Snippets during `preBuild` and bundles the JSON packs into APK assets. After installation, snippets are available offline.
+- Snippet packs are selected by file extension, with mappings for many common languages and framework file types. Unknown extensions return no language-specific snippets rather than showing irrelevant snippets for another language.
+- VS Code placeholders are normalized to plain text when inserted; tab-stop navigation and choice placeholders are not fully supported by Sora's current `SimpleCompletionItem` insertion path.
 
-## Bahasa
+## LSP
 
-Grammar universal yang disertakan memberikan highlighting dasar lintas banyak bahasa dan format source, bukan grammar khusus atau semantic analysis untuk benar-benar setiap bahasa. Dukungan lebih presisi untuk bahasa tertentu dapat ditambahkan berikutnya dengan grammar TextMate khusus atau Language Server Protocol (LSP). Autocomplete saat ini merupakan identifier completion dari TextMate ditambah snippet; bukan AI completion atau LSP.
+- Adds Sora Editor's `editor-lsp` dependency.
+- Raises `minSdk` to 26, matching Sora's documented LSP requirement.
+- See `LSP_SETUP.md`: **the LSP client module is present, but no language-server process or transport is connected yet**. This patch does not claim semantic LSP completion/diagnostics are active. A language server and lifecycle/transport integration are required for real LSP behavior.
 
-## Build
+## Theme and UI
 
-Jalankan workflow GitHub Actions yang sudah ada. Versi dependency dipatok ke Sora Editor 0.23.6 dan Kotlin 2.1.21; dependency diambil Gradle dari Maven Central. **Build tidak berhasil diverifikasi di lingkungan pembuatan patch ini**, jadi cek hasil workflow setelah push.
+The existing Sally toolbar, Material components, colors, file picker, open/save behavior, and Sora editor theme setup are retained. This patch mainly changes snippet sourcing and Gradle dependencies.
 
-Referensi library: https://github.com/Rosemoe/sora-editor
+## Build notes
+
+The Friendly Snippets archive is downloaded at build time, so GitHub Actions needs network access to GitHub. Build was not run in this environment; verify the workflow before relying on the APK. Third-party licenses are listed in `THIRD_PARTY_NOTICES.md`.
