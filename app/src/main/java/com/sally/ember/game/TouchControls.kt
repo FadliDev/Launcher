@@ -556,14 +556,14 @@ internal class TouchControls(ctx: Context, private val onKeyboard: () -> Unit) :
     }
 
     fun editControl(spec: ControlSpec) {
-        val label = EditText(context).apply { setText(spec.label); hint = "Button label"; singleLine = true }
+        val label = EditText(context).apply { setText(spec.label); hint = "Button label"; setSingleLine(true) }
         val width = SeekBar(context).apply { max = 232; progress = (spec.widthDp - 28).coerceIn(0, max) }
         val height = SeekBar(context).apply { max = 172; progress = (spec.heightDp - 28).coerceIn(0, max) }
         val opacity = SeekBar(context).apply { max = 85; progress = ((spec.opacity - 0.15f) * 100).roundToInt().coerceIn(0, max) }
         val radius = SeekBar(context).apply { max = 100; progress = spec.cornerRadius.roundToInt().coerceIn(0, max) }
         val borderWidth = SeekBar(context).apply { max = 80; progress = (spec.strokeWidthDp * 10f).roundToInt().coerceIn(0, max) }
-        val backgroundColor = EditText(context).apply { setText(String.format("#%08X", spec.background)); hint = "Background ARGB"; singleLine = true }
-        val outlineColor = EditText(context).apply { setText(String.format("#%08X", spec.outline)); hint = "Outline ARGB"; singleLine = true }
+        val backgroundColor = EditText(context).apply { setText(String.format("#%08X", spec.background)); hint = "Background ARGB"; setSingleLine(true) }
+        val outlineColor = EditText(context).apply { setText(String.format("#%08X", spec.outline)); hint = "Outline ARGB"; setSingleLine(true) }
         val combo = TextView(context).apply {
             text = "Edit key combination (up to 4 keys)"
             setTextColor(Color.rgb(85, 115, 205)); setPadding(dp(8), dp(8), dp(8), dp(8))

@@ -64,8 +64,8 @@ internal object GameInputMapper {
             KeyEvent.KEYCODE_NUMPAD_EQUALS -> K.GLFW_KEY_KP_EQUAL.toInt()
             KeyEvent.KEYCODE_NUM_LOCK -> K.GLFW_KEY_NUM_LOCK.toInt()
             KeyEvent.KEYCODE_SCROLL_LOCK -> K.GLFW_KEY_SCROLL_LOCK.toInt()
-            KeyEvent.KEYCODE_PRINT_SCREEN -> K.GLFW_KEY_PRINT_SCREEN.toInt()
-            KeyEvent.KEYCODE_PAUSE -> K.GLFW_KEY_PAUSE.toInt()
+            120 /* KEYCODE_SYSRQ / Print Screen */ -> K.GLFW_KEY_PRINT_SCREEN.toInt()
+            121 /* KEYCODE_BREAK / Pause */ -> K.GLFW_KEY_PAUSE.toInt()
             else -> null
         }
     }

@@ -23,7 +23,7 @@ Included behavior:
 
 ## Build validation
 
-Run the existing workflow `.github/workflows/android.yml` (or push the patch and inspect the Actions run). Do not treat this port as runtime-verified until that build succeeds and touch/mouse behavior is tested in Minecraft.
+The follow-up patch fixes the compile errors reported by the first GitHub Actions run: use numeric Android key codes for SYSRQ/BREAK instead of nonexistent `KEYCODE_PRINT_SCREEN` / `KEYCODE_PAUSE`, and call `EditText.setSingleLine(true)` rather than an invalid Kotlin property. This container still cannot run the Android Gradle build because it has no Gradle installation, wrapper, or Android SDK platform. Run the existing workflow `.github/workflows/android.yml` (or push the patch and inspect the Actions run). Do not treat this port as runtime-verified until that build succeeds and touch/mouse behavior is tested in Minecraft.
 
 ## License attribution
 
