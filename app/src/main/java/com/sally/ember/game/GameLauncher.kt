@@ -82,6 +82,12 @@ object GameLauncher {
             jreHome, nativeDir, renderer.library, glfwJar)
         args.forEach { say("JVMArg: $it") }
 
+        // Same as PojavLauncher: 1.13+ versions (new "arguments" json) need input delivered on the render thread via the
+        // stack queue (pumped from glfwPollEvents). Direct callbacks from the Android UI thread are ignored/unsafe there.
+        val stackQueue = vjson.has("arguments")
+        org.lwjgl.glfw.CallbackBridge.nativeSetUseInputStackQueue(stackQueue)
+        say("Input stack queue: $stackQueue")
+
         JREUtils.setupExitMethod(ctx.applicationContext)
         JREUtils.initializeGameExitHook()
         JREUtils.chdir(Paths.gameDir.path)

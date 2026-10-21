@@ -23,6 +23,11 @@
 #include "utils.h"
 #include "environ/environ.h"
 
+
+/* Diagnostics: first few input events (and every drop reason) are printed to stdout -> latest.log. */
+#include <stdio.h>
+#define IN_DBG(counter, limit, ...) do { static int counter; if (counter < (limit)) { counter++; printf(__VA_ARGS__); fflush(stdout); } } while(0)
+
 #define EVENT_TYPE_CHAR 1000
 #define EVENT_TYPE_CHAR_MODS 1001
 #define EVENT_TYPE_CURSOR_ENTER 1002
@@ -299,6 +304,7 @@ JNIEXPORT jboolean JNICALL JavaCritical_org_lwjgl_glfw_CallbackBridge_nativeSetI
 #endif
     __android_log_print(ANDROID_LOG_INFO, "NativeInput", "Input ready: %i", inputReady);
     pojav_environ->isInputReady = inputReady;
+    printf("[input] nativeSetInputReady(%d) stackQueue=%d showingWindow=%ld\n", inputReady, pojav_environ->isUseStackQueueCall, (long) pojav_environ->showingWindow); fflush(stdout);
     return pojav_environ->isUseStackQueueCall;
 }
 
@@ -354,9 +360,10 @@ JNIEXPORT void JNICALL Java_org_lwjgl_glfw_CallbackBridge_nativeSendCursorEnter(
 */
 
 void critical_send_cursor_pos(jfloat x, jfloat y) {
-#ifdef DEBUG
-    LOGD("Sending cursor position \n");
-#endif
+    if (!(pojav_environ->GLFW_invoke_CursorPos && pojav_environ->isInputReady))
+        IN_DBG(dropCursor, 5, "[input] cursor DROPPED: callback=%p ready=%d\n", (void*) pojav_environ->GLFW_invoke_CursorPos, pojav_environ->isInputReady);
+    else
+        IN_DBG(okCursor, 3, "[input] cursor ok x=%.0f y=%.0f stack=%d window=%ld\n", x, y, pojav_environ->isUseStackQueueCall, (long) pojav_environ->showingWindow);
     if (pojav_environ->GLFW_invoke_CursorPos && pojav_environ->isInputReady) {
 #ifdef DEBUG
         LOGD("pojav_environ->GLFW_invoke_CursorPos && pojav_environ->isInputReady \n");
@@ -393,6 +400,10 @@ void noncritical_send_cursor_pos(__attribute__((unused)) JNIEnv* env, __attribut
        __typeof__ (b) _b = (b); \
      _a > _b ? _a : _b; })
 void critical_send_key(jint key, jint scancode, jint action, jint mods) {
+    if (!(pojav_environ->GLFW_invoke_Key && pojav_environ->isInputReady))
+        IN_DBG(dropKey, 5, "[input] key DROPPED: callback=%p ready=%d\n", (void*) pojav_environ->GLFW_invoke_Key, pojav_environ->isInputReady);
+    else
+        IN_DBG(okKey, 5, "[input] key=%d action=%d stack=%d\n", key, action, pojav_environ->isUseStackQueueCall);
     if (pojav_environ->GLFW_invoke_Key && pojav_environ->isInputReady) {
         pojav_environ->keyDownBuffer[max(0, key-31)] = (jbyte) action;
         if (pojav_environ->isUseStackQueueCall) {
@@ -407,6 +418,10 @@ void noncritical_send_key(__attribute__((unused)) JNIEnv* env, __attribute__((un
 }
 
 void critical_send_mouse_button(jint button, jint action, jint mods) {
+    if (!(pojav_environ->GLFW_invoke_MouseButton && pojav_environ->isInputReady))
+        IN_DBG(dropBtn, 5, "[input] mouse button DROPPED: callback=%p ready=%d\n", (void*) pojav_environ->GLFW_invoke_MouseButton, pojav_environ->isInputReady);
+    else
+        IN_DBG(okBtn, 5, "[input] mouse button=%d action=%d stack=%d\n", button, action, pojav_environ->isUseStackQueueCall);
     if (pojav_environ->GLFW_invoke_MouseButton && pojav_environ->isInputReady) {
         pojav_environ->mouseDownBuffer[max(0, button)] = (jbyte) action;
         if (pojav_environ->isUseStackQueueCall) {
