@@ -1,3 +1,6 @@
+import java.net.URL
+import java.util.zip.ZipInputStream
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
@@ -57,12 +60,16 @@ val downloadFriendlySnippets by tasks.registering {
         if (snippetsDir.exists() && snippetsDir.listFiles()?.isNotEmpty() == true) return@doLast
         snippetsDir.mkdirs()
         val archive = root.resolve("friendly-snippets.zip")
-        val url = java.net.URL("https://github.com/rafamadriz/friendly-snippets/archive/refs/heads/main.zip")
-        url.openConnection().apply {
-            connectTimeout = 20_000
-            readTimeout = 60_000
-        }.getInputStream().use { input -> archive.outputStream().use(input::copyTo) }
-        java.util.zip.ZipInputStream(archive.inputStream().buffered()).use { zip ->
+        val url = URL("https://github.com/rafamadriz/friendly-snippets/archive/refs/heads/main.zip")
+        val connection: java.net.URLConnection = url.openConnection()
+        connection.connectTimeout = 20_000
+        connection.readTimeout = 60_000
+        connection.getInputStream().use { input ->
+            archive.outputStream().use { output ->
+                input.copyTo(output)
+            }
+        }
+        ZipInputStream(archive.inputStream().buffered()).use { zip ->
             var entry = zip.nextEntry
             while (entry != null) {
                 val marker = "/snippets/"
