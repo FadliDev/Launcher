@@ -111,7 +111,7 @@ class GameActivity : Activity(), SurfaceHolder.Callback {
 
     @Deprecated("Back = Escape in game")
     override fun onBackPressed() {
-        CallbackBridge.sendKeyPress(LwjglGlfwKeycode.GLFW_KEY_ESCAPE, 0, true)
-        CallbackBridge.sendKeyPress(LwjglGlfwKeycode.GLFW_KEY_ESCAPE, 0, false)
+        CallbackBridge.sendKeyPress(LwjglGlfwKeycode.GLFW_KEY_ESCAPE.toInt(), 0, true)
+        CallbackBridge.sendKeyPress(LwjglGlfwKeycode.GLFW_KEY_ESCAPE.toInt(), 0, false)
     }
 }

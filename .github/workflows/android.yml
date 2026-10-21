@@ -43,13 +43,13 @@ jobs:
             cp third_party/libng_gl4es.so "$OUT/libng_gl4es.so"; echo "Using prebuilt third_party/libng_gl4es.so"; exit 0
           fi
           export ANDROID_NDK_HOME="$ANDROID_HOME/ndk/${NDK_VERSION}"
-          git clone --depth 1 ${KRYPTON_REF:+--branch "$KRYPTON_REF"} "$KRYPTON_REPO" /tmp/krypton
+          git clone --depth 1 --recurse-submodules --shallow-submodules ${KRYPTON_REF:+--branch "$KRYPTON_REF"} "$KRYPTON_REPO" /tmp/krypton
           cd /tmp/krypton
           if [ -f CMakeLists.txt ]; then
             cmake -S . -B build -G Ninja \
               -DCMAKE_TOOLCHAIN_FILE="$ANDROID_NDK_HOME/build/cmake/android.toolchain.cmake" \
               -DANDROID_ABI=arm64-v8a -DANDROID_PLATFORM=android-26 -DCMAKE_BUILD_TYPE=Release \
-              -DNOX11=ON -DNOEGL=OFF
+              -DCMAKE_POLICY_VERSION_MINIMUM=3.5 -DNOX11=ON -DNOEGL=OFF
             cmake --build build -j"$(nproc)"
             SO=$(find build -name '*.so' -size +100k | head -n1)
           elif [ -f Android.mk ] || [ -d jni ]; then
