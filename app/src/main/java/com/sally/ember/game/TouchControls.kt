@@ -164,6 +164,8 @@ internal class Joystick(ctx: Context) : View(ctx) {
  */
 internal class LookView(ctx: Context) : View(ctx) {
     var directTouch = false
+    /** Physical mouse/trackpad handler; mouse-sourced touches bypass the finger gestures below. */
+    var mouse: MouseInput? = null
     private val d = resources.displayMetrics.density
     private val slop = ViewConfiguration.get(ctx).scaledTouchSlop.toFloat()
     private val camSens = 1.1f
@@ -198,6 +200,7 @@ internal class LookView(ctx: Context) : View(ctx) {
     private fun avgY(e: MotionEvent): Float { var s = 0f; for (i in 0 until e.pointerCount) s += e.getY(i); return s / e.pointerCount }
 
     override fun onTouchEvent(e: MotionEvent): Boolean {
+        mouse?.let { if (it.isMouseEvent(e)) { it.onTouch(e); return true } }
         when (e.actionMasked) {
             MotionEvent.ACTION_DOWN -> {
                 id = e.getPointerId(0); lastX = e.x; lastY = e.y; downX = e.x; downY = e.y; downAt = e.eventTime
@@ -320,6 +323,8 @@ internal class TouchControls(ctx: Context, onKeyboard: () -> Unit) : FrameLayout
 
         setGrabbing(CB.isGrabbing())
     }
+
+    fun setMouse(m: MouseInput) { look.mouse = m }
 
     /** Switches between the in-game layout and the menu (pointer) layout. */
     fun setGrabbing(grabbing: Boolean) {

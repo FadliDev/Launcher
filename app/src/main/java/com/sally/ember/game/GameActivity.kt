@@ -33,6 +33,7 @@ class GameActivity : Activity(), SurfaceHolder.Callback {
     private lateinit var closeBtn: TextView
     private lateinit var controls: TouchControls
     private lateinit var kbInput: EditText
+    private lateinit var mouse: MouseInput
     private val ui = Handler(Looper.getMainLooper())
     private var started = false
     private var logVisible = true
@@ -49,7 +50,11 @@ class GameActivity : Activity(), SurfaceHolder.Callback {
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         // The soft keyboard must never resize the window: that would resize the GL surface mid-game.
         window.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_NOTHING)
-        val root = FrameLayout(this)
+        val root = FrameLayout(this).apply {
+            isFocusable = true; isFocusableInTouchMode = true // required for pointer capture
+            // The launcher draws its own arrow in menus, so hide the system mouse cursor.
+            pointerIcon = PointerIcon.getSystemIcon(this@GameActivity, PointerIcon.TYPE_NULL)
+        }
         val sv = SurfaceView(this).also { it.holder.addCallback(this) }
         root.addView(sv)
 
@@ -62,6 +67,8 @@ class GameActivity : Activity(), SurfaceHolder.Callback {
 
         controls = TouchControls(this) { toggleKeyboard() }
         root.addView(controls, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))
+        mouse = MouseInput(root) { !logVisible && !exited }
+        controls.setMouse(mouse)
 
         // Hidden field that receives soft-keyboard input and forwards it to the game as GLFW char/key events.
         kbInput = buildKeyboardInput()
@@ -118,6 +125,25 @@ class GameActivity : Activity(), SurfaceHolder.Callback {
         applyLogVisibility()
         closeBtn.visibility = View.VISIBLE
         logScroll.post { logScroll.fullScroll(View.FOCUS_DOWN) }
+    }
+
+    // ---- physical mouse / trackpad ----
+
+    override fun dispatchGenericMotionEvent(ev: MotionEvent): Boolean =
+        (::mouse.isInitialized && mouse.onGeneric(ev)) || super.dispatchGenericMotionEvent(ev)
+
+    override fun dispatchKeyEvent(ev: KeyEvent): Boolean {
+        // Android reports a mouse right-click as Back; in game that must be "use", not Escape.
+        if (ev.keyCode == KeyEvent.KEYCODE_BACK && (ev.source and InputDevice.SOURCE_MOUSE) == InputDevice.SOURCE_MOUSE && !logVisible && !exited) {
+            Held.mouse(LwjglGlfwKeycode.GLFW_MOUSE_BUTTON_RIGHT.toInt(), ev.action == KeyEvent.ACTION_DOWN)
+            return true
+        }
+        return super.dispatchKeyEvent(ev)
+    }
+
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        if (::mouse.isInitialized) mouse.onWindowFocus(hasFocus)
     }
 
     private fun closeGame() { finishAndRemoveTask(); android.os.Process.killProcess(android.os.Process.myPid()) }
