@@ -61,8 +61,17 @@ object GameLauncher {
         env.forEach { (k, v) -> Os.setenv(k, v, true); say("env $k=$v") }
 
         fun find(name: String) = ld.split(":").map { File(it, name) }.firstOrNull { it.exists() }?.path ?: name
-        JREUtils.dlopen(find("libjli.so"))
-        if (!JREUtils.dlopen("libjvm.so")) JREUtils.dlopen("$jreHome/$libDir/$jvmDir/libjvm.so")
+        val jli = find("libjli.so")
+        say("libjli: $jli (exists=${File(jli).exists()})")
+        if (!File(jli).exists() || !JREUtils.dlopen(jli)) {
+            say("ERROR: libjli.so gagal dimuat dari $jli. JRE rusak/tidak lengkap atau folder tidak bisa dieksekusi (jangan taruh JRE di storage eksternal).")
+            File(jreHome, ".ember_version").delete() // force re-extract next launch
+            return -3
+        }
+        if (!JREUtils.dlopen("libjvm.so") && !JREUtils.dlopen("$jreHome/$libDir/$jvmDir/libjvm.so")) {
+            say("ERROR: libjvm.so gagal dimuat dari $jreHome/$libDir/$jvmDir")
+            return -4
+        }
         listOf("libverify.so", "libjava.so", "libnet.so", "libnio.so", "libawt.so", "libawt_headless.so",
             "libfreetype.so", "libfontmanager.so").forEach { JREUtils.dlopen(find(it)) }
         JREUtils.dlopen("$nativeDir/libopenal.so")

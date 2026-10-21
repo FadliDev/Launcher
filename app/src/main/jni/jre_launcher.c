@@ -139,7 +139,9 @@ static jint launchJVM(int margc, char** margv) {
    // LOGD("JLI lib = %x", (int)libjli);
    if (NULL == libjli)
    {
-       LOGE("JLI lib = NULL: %s", dlerror());
+       const char* err = dlerror();
+       LOGE("JLI lib = NULL: %s", err);
+       printf("ERROR: dlopen libjli.so failed: %s\n", err ? err : "?"); fflush(stdout);
        return -1;
    }
    LOGD("Found JLI lib");
@@ -151,6 +153,7 @@ static jint launchJVM(int margc, char** margv) {
    if (NULL == pJLI_Launch)
    {
        LOGE("JLI_Launch = NULL");
+       printf("ERROR: JLI_Launch symbol not found in libjli.so\n"); fflush(stdout);
        return -1;
    }
 
