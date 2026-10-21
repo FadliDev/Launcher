@@ -1,19 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <uses-permission android:name="android.permission.INTERNET" />
     <application
         android:allowBackup="false"
-        android:label="Sally Launcher"
-        android:supportsRtl="true"
-        android:theme="@style/Theme.SallyLauncher"
-        android:usesCleartextTraffic="false">
-        <activity
-            android:name=".MainActivity"
-            android:exported="true"
-            android:screenOrientation="portrait">
+        android:extractNativeLibs="true"
+        android:label="Ember"
+        android:theme="@style/Theme.Ember"
+        android:largeHeap="true">
+        <activity android:name=".MainActivity" android:exported="true"
+            android:configChanges="orientation|screenSize|keyboardHidden">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <!-- JVM runs in its own process: the JVM calls exit() and would kill the UI otherwise -->
+        <activity android:name=".game.GameActivity" android:process=":game"
+            android:exported="false" android:launchMode="singleTask"
+            android:screenOrientation="sensorLandscape" android:hardwareAccelerated="true"
+            android:theme="@android:style/Theme.Black.NoTitleBar.Fullscreen"
+            android:configChanges="orientation|screenSize|keyboardHidden|smallestScreenSize|screenLayout" />
     </application>
 </manifest>

@@ -1,45 +1,27 @@
-# Sally Launcher
+# Ember Launcher
 
-A new Android launcher project foundation for Minecraft: Java Edition. The UI and launcher core are original project code; the future game-engine integration is designed as a separate adapter boundary.
+Launcher Minecraft Java untuk Android (Kotlin + Jetpack Compose), dibuat dari nol dengan arsitektur ala ZalithLauncher.
 
-## Current milestone (0.1.0)
+## Fitur
+- UI Compose: Home / Versi / Akun / Setelan
+- Akun offline (UUID `OfflinePlayer:<nama>`)
+- Download versi Mojang (client, library, asset; paralel, cek SHA-1)
+- **Java ikut di dalam APK** (assets/components, sama seperti Zalith): JRE 8, 17, 21, 25 (arm64). Otomatis dipilih dari `javaVersion` di JSON versi, diekstrak sekali saat pertama main.
+- **Renderer default: Krypton Wrapper** (NG-GL4ES, `libng_gl4es.so`). Kalau lib-nya tidak ada di APK, otomatis fallback ke GL4ES (`libgl4es_114.so`).
+- Jembatan native Zalith (`src/main/jni`, ndk-build): JLI launch, EGL/GLES bridge, GLFW input
+- Kontrol sentuh dasar: geser = kamera/kursor, tap = klik kiri, tahan = klik kiri ditahan (mining), 2 jari = klik kanan, Back = Esc
 
-Implemented:
-- Native Android app with Kotlin, Jetpack Compose, and Material 3-inspired dark portrait UI.
-- Loads Mojang's official version manifest over HTTPS.
-- Filters release, snapshot, and old-beta versions.
-- Downloads a selected version's version JSON and client JAR into app-private storage.
-- Checks the downloaded JAR size against metadata when provided.
-- Defines a `MinecraftEngineAdapter` boundary so engine integration stays separate from UI.
+## Build di GitHub Actions
+1. Push project ini ke repo GitHub.
+2. Tab **Actions** → workflow **Build Ember** (jalan otomatis tiap push, atau *Run workflow*).
+3. APK ada di **Artifacts → Ember-debug-apk**.
 
-Not implemented yet:
-- Full version installer: asset index/assets, libraries, rules, natives, logging configuration, and checksum verification.
-- Java runtime provisioning and architecture selection.
-- Renderer/input integration and actual Minecraft process launch.
-- Microsoft account authentication.
-- Mod loader installation.
+Workflow meng-clone `BZLZHH/NG-GL4ES`, mem-build jadi `libng_gl4es.so`, lalu memasukkannya ke APK. Opsi:
+- Punya binary sendiri? Taruh di `third_party/libng_gl4es.so` (build dilewati).
+- Pakai fork lain: set repo variable `KRYPTON_REPO` (dan `KRYPTON_REF` untuk branch/tag).
+- Kalau build Krypton gagal, workflow tetap lanjut dengan peringatan dan APK jatuh ke GL4ES.
 
-The **Play** button intentionally explains that the engine adapter is not available yet. Downloading a client JAR alone does not make a Minecraft installation runnable.
-
-## Build
-
-- Android Studio with JDK 17
-- Android SDK Platform 35
-- Gradle 8.9-compatible environment (AGP 8.7.3)
-
-Open this directory in Android Studio and sync Gradle, then run the `app` configuration. This archive does not include the Gradle wrapper JAR; Android Studio can use its configured Gradle installation, or generate a wrapper locally with Gradle 8.9 (`gradle wrapper --gradle-version 8.9`).
-
-## Package details
-
-- Application ID: `com.sally.launcher`
-- Version: `0.1.0` (`versionCode` 1)
-- Minimum Android: API 26
-- Target SDK: 35
-
-## Engine integration strategy
-
-Keep the launcher core independent from any engine implementation. The intended next step is to evaluate and integrate compatible PojavLauncher components behind `MinecraftEngineAdapter`, preserving their applicable license notices and source distribution obligations. Do not copy code or native binaries from third-party projects without reviewing their licenses and required notices.
-
-## Legal / distribution note
-
-Minecraft is a trademark of Mojang Studios/Microsoft. This project is unofficial and is not affiliated with or endorsed by Mojang or Microsoft. Use official Minecraft metadata and assets in accordance with applicable terms. Any future Pojav-derived components must comply with their actual upstream license and attribution requirements.
+## Catatan
+- Belum pernah dikompilasi/dites di perangkat; build pertama kemungkinan butuh beberapa perbaikan kecil.
+- Belum ada: login Microsoft, loader (Fabric/Forge), Minecraft <= 1.12 (LWJGL2), MioLibPatcher, kontrol layar kustom, keyboard fisik.
+- Lisensi: berisi kode dari ZalithLauncher/PojavLauncher (GPLv3/LGPLv3) → project ini ikut GPLv3 (lihat `LICENSE-ZalithLauncher-GPLv3`).

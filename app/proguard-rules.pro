@@ -1,0 +1,4 @@
+-keep class com.sally.ember.game.** { *; }
+-keep class org.lwjgl.glfw.CallbackBridge { *; }
+-keep class net.kdt.pojavlaunch.** { *; }
+-keep class com.oracle.dalvik.** { *; }

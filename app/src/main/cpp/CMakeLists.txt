@@ -1,0 +1,5 @@
+cmake_minimum_required(VERSION 3.22.1)
+project(ember)
+add_library(ember SHARED ember_launcher.cpp)
+find_library(log-lib log)
+target_link_libraries(ember ${log-lib} dl)
