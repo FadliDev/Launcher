@@ -1,0 +1,7 @@
+{
+  "puts": {
+    "prefix": "puts",
+    "body": "puts ${1:\"Hello, world!\"}",
+    "description": "Print text"
+  }
+}

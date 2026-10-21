@@ -1,0 +1,7 @@
+{
+  "list": {
+    "prefix": "list",
+    "body": "${1:items}:\n  - ${2:item}",
+    "description": "YAML list"
+  }
+}

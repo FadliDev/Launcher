@@ -1,0 +1,27 @@
+{
+  "log": {
+    "prefix": "log",
+    "body": "console.log(${1:value});",
+    "description": "Console log"
+  },
+  "function": {
+    "prefix": "fn",
+    "body": "function ${1:name}(${2:params}) {\n    $0\n}",
+    "description": "Function declaration"
+  },
+  "arrow": {
+    "prefix": "af",
+    "body": "const ${1:name} = (${2:params}) => {\n    $0\n};",
+    "description": "Arrow function"
+  },
+  "foreach": {
+    "prefix": "foreach",
+    "body": "${1:items}.forEach((${2:item}) => {\n    $0\n});",
+    "description": "forEach loop"
+  },
+  "if": {
+    "prefix": "if",
+    "body": "if (${1:condition}) {\n    $0\n}",
+    "description": "if statement"
+  }
+}

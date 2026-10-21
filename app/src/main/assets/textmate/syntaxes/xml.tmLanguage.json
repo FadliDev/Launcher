@@ -1,0 +1,59 @@
+{
+  "scopeName": "text.xml",
+  "patterns": [
+    {
+      "name": "comment.block",
+      "begin": "<!--",
+      "end": "-->"
+    },
+    {
+      "name": "string.quoted.double",
+      "begin": "\"",
+      "end": "\"",
+      "patterns": [
+        {
+          "name": "constant.character.escape",
+          "match": "\\\\."
+        }
+      ]
+    },
+    {
+      "name": "string.quoted.single",
+      "begin": "'",
+      "end": "'",
+      "patterns": [
+        {
+          "name": "constant.character.escape",
+          "match": "\\\\."
+        }
+      ]
+    },
+    {
+      "name": "string.quoted.backtick",
+      "begin": "`",
+      "end": "`",
+      "patterns": [
+        {
+          "name": "constant.character.escape",
+          "match": "\\\\."
+        }
+      ]
+    },
+    {
+      "name": "constant.numeric",
+      "match": "\\b(?:0[xX][0-9a-fA-F]+|0[bB][01]+|\\d+(?:\\.\\d+)?(?:[eE][+-]?\\d+)?)\\b"
+    },
+    {
+      "name": "entity.name.tag",
+      "match": "</?[A-Za-z][A-Za-z0-9:_-]*"
+    },
+    {
+      "name": "entity.other.attribute-name",
+      "match": "\\b[A-Za-z_:][-A-Za-z0-9_:.]*(?=\\s*=)"
+    },
+    {
+      "name": "constant.character.entity",
+      "match": "&[A-Za-z#0-9]+;"
+    }
+  ]
+}

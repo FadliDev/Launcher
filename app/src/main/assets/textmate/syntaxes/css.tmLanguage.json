@@ -1,0 +1,58 @@
+{
+  "scopeName": "source.css",
+  "patterns": [
+    {
+      "name": "string.quoted.double",
+      "begin": "\"",
+      "end": "\"",
+      "patterns": [
+        {
+          "name": "constant.character.escape",
+          "match": "\\\\."
+        }
+      ]
+    },
+    {
+      "name": "string.quoted.single",
+      "begin": "'",
+      "end": "'",
+      "patterns": [
+        {
+          "name": "constant.character.escape",
+          "match": "\\\\."
+        }
+      ]
+    },
+    {
+      "name": "string.quoted.backtick",
+      "begin": "`",
+      "end": "`",
+      "patterns": [
+        {
+          "name": "constant.character.escape",
+          "match": "\\\\."
+        }
+      ]
+    },
+    {
+      "name": "constant.numeric",
+      "match": "\\b(?:0[xX][0-9a-fA-F]+|0[bB][01]+|\\d+(?:\\.\\d+)?(?:[eE][+-]?\\d+)?)\\b"
+    },
+    {
+      "name": "keyword.control",
+      "match": "\\b(?:font\\-family|line\\-height|transition|@keyframes|background|@font\\-face|important|transform|animation|max\\-width|min\\-width|@supports|font\\-size|position|@charset|absolute|relative|z\\-index|inherit|display|content|initial|padding|@import|@media|bottom|sticky|inline|margin|border|height|revert|width|right|unset|color|block|fixed|calc|grid|font|left|none|flex|top|var)\\b"
+    },
+    {
+      "name": "entity.name.tag.css",
+      "match": "\\b[A-Za-z_-][A-Za-z0-9_-]*(?=\\s*\\{)"
+    },
+    {
+      "name": "support.type.property-name.css",
+      "match": "\\b[a-z-]+(?=\\s*:)"
+    },
+    {
+      "name": "constant.other.color",
+      "match": "#[0-9a-fA-F]{3,8}\\b"
+    }
+  ]
+}

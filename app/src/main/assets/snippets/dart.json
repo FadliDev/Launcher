@@ -1,0 +1,7 @@
+{
+  "main": {
+    "prefix": "main",
+    "body": "void main() {\n  $0\n}",
+    "description": "Dart main function"
+  }
+}

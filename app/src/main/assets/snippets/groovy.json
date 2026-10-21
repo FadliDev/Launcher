@@ -1,0 +1,12 @@
+{
+  "plugins": {
+    "prefix": "plugins",
+    "body": "plugins {\n    id \"${1:java}\"\n}",
+    "description": "Gradle plugins"
+  },
+  "dependencies": {
+    "prefix": "dependencies",
+    "body": "dependencies {\n    implementation(\"${1:group:artifact:version}\")\n}",
+    "description": "Gradle dependencies"
+  }
+}

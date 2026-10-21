@@ -1,24 +1,62 @@
-# Sally Text Editor — Friendly Snippets + LSP groundwork patch
+# Sally IDE — MVP Android
 
-This is a changed-files-only patch for the existing Sally Text Editor repository. Merge the ZIP into the repository root and preserve relative paths.
+Sally IDE adalah editor kode Android berorientasi layar HP, menggunakan Kotlin, Jetpack Compose Material 3, dan Sora Editor. Rancangan proyek lengkap yang menjadi acuan ada di direktori [`docs/`](docs/).
 
-## Snippets
+## Fitur yang ada di MVP
 
-- Uses the upstream Friendly Snippets VS Code-compatible JSON collection instead of maintaining a hardcoded per-language snippet list in `MainActivity.kt`.
-- Gradle fetches Friendly Snippets during `preBuild` and bundles the JSON packs into APK assets. After installation, snippets are available offline.
-- Snippet packs are selected by file extension, with mappings for many common languages and framework file types. Unknown extensions return no language-specific snippets rather than showing irrelevant snippets for another language.
-- VS Code placeholders are normalized to plain text when inserted; tab-stop navigation and choice placeholders are not fully supported by Sora's current `SimpleCompletionItem` insertion path.
+- Editor kode dengan nomor baris, tema TextMate, bracket highlight, auto-indent, undo/redo.
+- Grammar syntax highlighting dasar untuk Kotlin, Java, JavaScript, TypeScript, HTML, CSS, JSON, Python, C/C++, XML, Gradle/Groovy, Markdown, TOML, INI/properties, YAML, shell, SQL, Rust, Go, PHP, Ruby, Dart, Swift, dan Lua.
+- Tab multi-file, indikator perubahan belum disimpan, file baru, buka/simpan lewat Android Storage Access Framework, dan workspace internal.
+- Pencarian dan penggantian teks dalam file aktif.
+- Bar tombol ekstra untuk TAB, kurung, tanda baca, dan navigasi kursor.
+- Snippet bawaan untuk banyak bahasa, pemilih snippet, dan percobaan pengunduhan otomatis saat belum ada pack lokal. Pack yang berhasil diunduh disimpan di penyimpanan aplikasi. Unduhan memerlukan internet; jika offline editor masih bisa dipakai dengan snippet bawaan.
+- Tema Light/Dark, Dynamic Color Android 12+, dan mode hitam AMOLED.
+- GitHub Actions untuk membuat APK debug dan mengunggahnya sebagai artifact.
 
-## LSP
+## Batasan tahap ini
 
-- Adds Sora Editor's `editor-lsp` dependency.
-- Raises `minSdk` to 26, matching Sora's documented LSP requirement.
-- See `LSP_SETUP.md`: **the LSP client module is present, but no language-server process or transport is connected yet**. This patch does not claim semantic LSP completion/diagnostics are active. A language server and lifecycle/transport integration are required for real LSP behavior.
+MVP ini **belum** menjalankan Gradle untuk membangun aplikasi Android dari dalam ponsel. Project explorer berbentuk tree, template proyek lengkap, SDK/NDK manager, terminal, LSP penuh, dan build APK di perangkat direncanakan pada fase berikutnya sesuai `docs/ROADMAP.md`. Grammar yang dibundel merupakan grammar TextMate dasar, belum grammar vendor penuh yang sekomplet VS Code.
 
-## Theme and UI
+## Build lewat GitHub Actions
 
-The existing Sally toolbar, Material components, colors, file picker, open/save behavior, and Sora editor theme setup are retained. This patch mainly changes snippet sourcing and Gradle dependencies.
+1. Upload/push isi direktori ini ke repository GitHub.
+2. Buka tab **Actions**, jalankan workflow **Sally IDE Android CI** (atau push ke `main`/`master`).
+3. Setelah job berhasil, buka run itu dan unduh artifact **SallyIDE-debug-apk**.
 
-## Build notes
+Workflow menggunakan JDK 17, Gradle 8.11.1, dan Android SDK platform 35.
 
-The Friendly Snippets archive is downloaded at build time, so GitHub Actions needs network access to GitHub. Build was not run in this environment; verify the workflow before relying on the APK. Third-party licenses are listed in `THIRD_PARTY_NOTICES.md`.
+## Build lokal
+
+Persyaratan: JDK 17, koneksi internet pertama kali, dan Android SDK platform 35/build-tools 35.0.0.
+
+Linux/macOS/Termux yang mendukung `curl`, `unzip`, dan `sha256sum`:
+
+```sh
+./gradlew :app:assembleDebug
+```
+
+Di Windows gunakan:
+
+```bat
+gradlew.bat :app:assembleDebug
+```
+
+Skrip Gradle di root adalah bootstrap sederhana yang mengunduh Gradle 8.11.1 dari server resmi dan memverifikasi SHA-256 sebelum dijalankan. Alternatifnya, buka folder di Android Studio dan sinkronkan proyek dengan Gradle 8.11.1.
+
+APK debug jika build lokal berhasil ada di `app/build/outputs/apk/debug/app-debug.apk`.
+
+## Identitas aplikasi
+
+- Nama: Sally IDE
+- Package: `com.sally.ide`
+- Minimum Android: 8.0 (API 26)
+- Versi awal: `0.1.0`
+- Kredit: sally
+
+## Validasi resource
+
+```sh
+python3 scripts/validate_assets.py
+```
+
+Script ini memvalidasi JSON grammar/theme/snippet dan memastikan tiap grammar yang terdaftar tersedia di assets.

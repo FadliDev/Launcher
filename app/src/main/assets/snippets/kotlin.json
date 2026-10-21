@@ -1,0 +1,32 @@
+{
+  "function": {
+    "prefix": "fun",
+    "body": "fun ${1:name}(${2:args}): ${3:Unit} {\n    $0\n}",
+    "description": "Function"
+  },
+  "main": {
+    "prefix": "main",
+    "body": "fun main() {\n    $0\n}",
+    "description": "Kotlin main function"
+  },
+  "println": {
+    "prefix": "println",
+    "body": "println(${1:\"Hello, world!\"})",
+    "description": "Print a line"
+  },
+  "class": {
+    "prefix": "class",
+    "body": "class ${1:ClassName} {\n    $0\n}",
+    "description": "Class declaration"
+  },
+  "when": {
+    "prefix": "when",
+    "body": "when (${1:value}) {\n    ${2:condition} -> $0\n    else -> Unit\n}",
+    "description": "when expression"
+  },
+  "if": {
+    "prefix": "if",
+    "body": "if (${1:condition}) {\n    $0\n}",
+    "description": "if block"
+  }
+}

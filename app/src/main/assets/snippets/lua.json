@@ -1,0 +1,7 @@
+{
+  "function": {
+    "prefix": "fn",
+    "body": "local function ${1:name}(${2:args})\n    $0\nend",
+    "description": "Lua function"
+  }
+}

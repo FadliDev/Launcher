@@ -1,15 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <uses-permission android:name="android.permission.INTERNET" />
+
     <application
         android:allowBackup="true"
-        android:label="@string/app_name"
+        android:icon="@drawable/ic_sally_ide"
+        android:label="Sally IDE"
         android:supportsRtl="true"
-        android:theme="@style/Theme.SallyTextEditor">
+        android:theme="@style/Theme.SallyIDE"
+        android:usesCleartextTraffic="false">
         <activity
             android:name=".MainActivity"
-            android:configChanges="keyboardHidden|orientation|screenSize"
-            android:exported="true">
+            android:configChanges="uiMode|orientation|screenSize|keyboardHidden"
+            android:exported="true"
+            android:windowSoftInputMode="adjustResize">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />

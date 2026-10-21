@@ -1,0 +1,67 @@
+{
+  "scopeName": "source.ts",
+  "patterns": [
+    {
+      "name": "comment.block",
+      "begin": "/\\*",
+      "end": "\\*/"
+    },
+    {
+      "name": "comment.line.double-slash",
+      "match": "//.*$"
+    },
+    {
+      "name": "string.quoted.double",
+      "begin": "\"",
+      "end": "\"",
+      "patterns": [
+        {
+          "name": "constant.character.escape",
+          "match": "\\\\."
+        }
+      ]
+    },
+    {
+      "name": "string.quoted.single",
+      "begin": "'",
+      "end": "'",
+      "patterns": [
+        {
+          "name": "constant.character.escape",
+          "match": "\\\\."
+        }
+      ]
+    },
+    {
+      "name": "string.quoted.backtick",
+      "begin": "`",
+      "end": "`",
+      "patterns": [
+        {
+          "name": "constant.character.escape",
+          "match": "\\\\."
+        }
+      ]
+    },
+    {
+      "name": "constant.numeric",
+      "match": "\\b(?:0[xX][0-9a-fA-F]+|0[bB][01]+|\\d+(?:\\.\\d+)?(?:[eE][+-]?\\d+)?)\\b"
+    },
+    {
+      "name": "keyword.control",
+      "match": "\\b(?:constructor|instanceof|implements|protected|interface|undefined|namespace|readonly|function|abstract|continue|private|asserts|finally|require|package|unknown|default|extends|boolean|declare|symbol|static|switch|module|number|import|typeof|unique|return|global|object|string|delete|public|bigint|export|break|while|false|const|yield|never|keyof|class|super|throw|infer|catch|await|async|type|void|from|else|null|with|enum|true|case|this|get|new|any|try|for|var|let|set|is|if|in|as|do)\\b"
+    },
+    {
+      "name": "entity.name.function",
+      "match": "\\b[A-Za-z_$][\\w$]*(?=\\s*\\()"
+    },
+    {
+      "name": "entity.name.type",
+      "match": "\\b[A-Z][A-Za-z0-9_$]*\\b"
+    },
+    {
+      "name": "constant.language",
+      "match": "\\b(?:true|false|null|undefined|None|nil|NaN|Infinity|NULL|NoneType)\\b"
+    }
+  ]
+}

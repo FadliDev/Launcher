@@ -1,0 +1,12 @@
+{
+  "root": {
+    "prefix": "root",
+    "body": "<${1:root}>\n    $0\n</$1>",
+    "description": "XML root element"
+  },
+  "item": {
+    "prefix": "item",
+    "body": "<${1:item} ${2:name}=\"${3:value}\" />",
+    "description": "XML element"
+  }
+}

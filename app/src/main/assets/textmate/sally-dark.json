@@ -1,28 +1,120 @@
 {
-  "$schema": "vscode://schemas/color-theme",
   "name": "Sally Dark",
   "type": "dark",
   "colors": {
-    "editor.background": "#111318",
-    "editor.foreground": "#E6E1E5",
+    "editor.background": "#101116",
+    "editor.foreground": "#DDE2F0",
     "editorCursor.foreground": "#D0BCFF",
-    "editorLineNumber.foreground": "#77727E",
-    "editorLineNumber.activeForeground": "#D0BCFF",
-    "editor.selectionBackground": "#49415F",
-    "editor.lineHighlightBackground": "#1C1B22",
-    "editorWhitespace.foreground": "#393641",
-    "editorIndentGuide.background": "#302D39"
+    "editor.selectionBackground": "#3D355A99",
+    "editor.lineHighlightBackground": "#191923",
+    "editorLineNumber.foreground": "#777889",
+    "editorLineNumber.activeForeground": "#E8E5F2",
+    "editorSuggestWidget.background": "#1D1B25",
+    "editorSuggestWidget.foreground": "#DDE2F0",
+    "editorSuggestWidget.selectedBackground": "#39304F",
+    "editorSuggestWidget.highlightForeground": "#D0BCFF",
+    "editorIndentGuide.background": "#282733",
+    "editorWhitespace.foreground": "#33313F",
+    "editor.findMatchBackground": "#5D4B83"
   },
   "tokenColors": [
-    {"scope": ["comment", "punctuation.definition.comment"], "settings": {"foreground": "#8A8F98", "fontStyle": "italic"}},
-    {"scope": ["string", "string.quoted", "markup.raw"], "settings": {"foreground": "#A8D7A0"}},
-    {"scope": ["constant.numeric", "constant.language", "constant.character.entity"], "settings": {"foreground": "#E7B879"}},
-    {"scope": ["keyword", "keyword.control", "storage.type", "storage.modifier"], "settings": {"foreground": "#D0BCFF"}},
-    {"scope": ["keyword.operator", "punctuation.separator", "punctuation.definition"], "settings": {"foreground": "#B8B4C5"}},
-    {"scope": ["entity.name.function", "support.function"], "settings": {"foreground": "#8CC8F0"}},
-    {"scope": ["entity.name.type", "support.type", "entity.name.class"], "settings": {"foreground": "#F2C58B"}},
-    {"scope": ["entity.name.tag", "punctuation.definition.tag"], "settings": {"foreground": "#80CBC4"}},
-    {"scope": ["entity.other.attribute-name", "variable.other.property"], "settings": {"foreground": "#F0A8B5"}},
-    {"scope": ["constant.other", "variable.language"], "settings": {"foreground": "#F2C58B"}}
+    {
+      "scope": [
+        "comment",
+        "punctuation.definition.comment"
+      ],
+      "settings": {
+        "foreground": "#7D879C",
+        "fontStyle": "italic"
+      }
+    },
+    {
+      "scope": [
+        "keyword",
+        "keyword.control",
+        "storage.type",
+        "storage.modifier"
+      ],
+      "settings": {
+        "foreground": "#C6A0F6"
+      }
+    },
+    {
+      "scope": [
+        "string",
+        "string.quoted",
+        "markup.raw"
+      ],
+      "settings": {
+        "foreground": "#A6D189"
+      }
+    },
+    {
+      "scope": [
+        "constant.numeric",
+        "constant.language",
+        "constant.character"
+      ],
+      "settings": {
+        "foreground": "#E5C890"
+      }
+    },
+    {
+      "scope": [
+        "entity.name.function",
+        "support.function",
+        "meta.function-call"
+      ],
+      "settings": {
+        "foreground": "#8AADF4"
+      }
+    },
+    {
+      "scope": [
+        "entity.name.type",
+        "entity.name.class",
+        "support.type",
+        "support.class"
+      ],
+      "settings": {
+        "foreground": "#91D7E3"
+      }
+    },
+    {
+      "scope": [
+        "entity.name.tag",
+        "support.type.property-name.css"
+      ],
+      "settings": {
+        "foreground": "#F5A97F"
+      }
+    },
+    {
+      "scope": [
+        "entity.other.attribute-name",
+        "variable.parameter"
+      ],
+      "settings": {
+        "foreground": "#EED49F"
+      }
+    },
+    {
+      "scope": [
+        "punctuation",
+        "meta.brace"
+      ],
+      "settings": {
+        "foreground": "#B8C0E0"
+      }
+    },
+    {
+      "scope": [
+        "invalid"
+      ],
+      "settings": {
+        "foreground": "#FFFFFF",
+        "background": "#E64553"
+      }
+    }
   ]
 }

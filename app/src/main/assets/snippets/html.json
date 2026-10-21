@@ -1,0 +1,22 @@
+{
+  "html5": {
+    "prefix": "html5",
+    "body": "<!doctype html>\n<html lang=\"${1:id}\">\n<head>\n    <meta charset=\"UTF-8\">\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n    <title>${2:Document}</title>\n</head>\n<body>\n    $0\n</body>\n</html>",
+    "description": "HTML5 document"
+  },
+  "div": {
+    "prefix": "div",
+    "body": "<div class=\"${1:container}\">\n    $0\n</div>",
+    "description": "Div element"
+  },
+  "link": {
+    "prefix": "linkcss",
+    "body": "<link rel=\"stylesheet\" href=\"${1:style.css}\">",
+    "description": "Stylesheet link"
+  },
+  "script": {
+    "prefix": "script",
+    "body": "<script src=\"${1:app.js}\"></script>",
+    "description": "Script tag"
+  }
+}

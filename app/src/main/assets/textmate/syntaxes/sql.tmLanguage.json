@@ -1,0 +1,67 @@
+{
+  "scopeName": "source.sql",
+  "patterns": [
+    {
+      "name": "comment.block",
+      "begin": "/\\*",
+      "end": "\\*/"
+    },
+    {
+      "name": "comment.line.double-slash",
+      "match": "//.*$"
+    },
+    {
+      "name": "string.quoted.double",
+      "begin": "\"",
+      "end": "\"",
+      "patterns": [
+        {
+          "name": "constant.character.escape",
+          "match": "\\\\."
+        }
+      ]
+    },
+    {
+      "name": "string.quoted.single",
+      "begin": "'",
+      "end": "'",
+      "patterns": [
+        {
+          "name": "constant.character.escape",
+          "match": "\\\\."
+        }
+      ]
+    },
+    {
+      "name": "string.quoted.backtick",
+      "begin": "`",
+      "end": "`",
+      "patterns": [
+        {
+          "name": "constant.character.escape",
+          "match": "\\\\."
+        }
+      ]
+    },
+    {
+      "name": "constant.numeric",
+      "match": "\\b(?:0[xX][0-9a-fA-F]+|0[bB][01]+|\\d+(?:\\.\\d+)?(?:[eE][+-]?\\d+)?)\\b"
+    },
+    {
+      "name": "keyword.control",
+      "match": "\\b(?:constraint|references|distinct|database|primary|foreign|default|between|values|offset|insert|unique|having|exists|create|update|delete|select|inner|limit|union|index|outer|group|table|where|check|right|count|alter|order|from|drop|when|null|else|full|left|like|then|case|join|into|avg|and|not|sum|all|end|key|set|min|max|by|on|is|as|or)\\b"
+    },
+    {
+      "name": "entity.name.function",
+      "match": "\\b[A-Za-z_$][\\w$]*(?=\\s*\\()"
+    },
+    {
+      "name": "entity.name.type",
+      "match": "\\b[A-Z][A-Za-z0-9_$]*\\b"
+    },
+    {
+      "name": "constant.language",
+      "match": "\\b(?:true|false|null|undefined|None|nil|NaN|Infinity|NULL|NoneType)\\b"
+    }
+  ]
+}

@@ -1,0 +1,7 @@
+{
+  "echo": {
+    "prefix": "echo",
+    "body": "echo ${1:\"Hello, world!\"};",
+    "description": "Output text"
+  }
+}

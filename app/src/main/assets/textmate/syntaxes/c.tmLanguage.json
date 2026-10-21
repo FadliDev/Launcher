@@ -1,0 +1,67 @@
+{
+  "scopeName": "source.c",
+  "patterns": [
+    {
+      "name": "comment.block",
+      "begin": "/\\*",
+      "end": "\\*/"
+    },
+    {
+      "name": "comment.line.double-slash",
+      "match": "//.*$"
+    },
+    {
+      "name": "string.quoted.double",
+      "begin": "\"",
+      "end": "\"",
+      "patterns": [
+        {
+          "name": "constant.character.escape",
+          "match": "\\\\."
+        }
+      ]
+    },
+    {
+      "name": "string.quoted.single",
+      "begin": "'",
+      "end": "'",
+      "patterns": [
+        {
+          "name": "constant.character.escape",
+          "match": "\\\\."
+        }
+      ]
+    },
+    {
+      "name": "string.quoted.backtick",
+      "begin": "`",
+      "end": "`",
+      "patterns": [
+        {
+          "name": "constant.character.escape",
+          "match": "\\\\."
+        }
+      ]
+    },
+    {
+      "name": "constant.numeric",
+      "match": "\\b(?:0[xX][0-9a-fA-F]+|0[bB][01]+|\\d+(?:\\.\\d+)?(?:[eE][+-]?\\d+)?)\\b"
+    },
+    {
+      "name": "keyword.control",
+      "match": "\\b(?:_Imaginary|restrict|volatile|_Complex|register|unsigned|continue|typedef|default|static|inline|double|switch|extern|signed|return|sizeof|struct|break|while|false|const|union|_Bool|short|float|void|else|char|enum|NULL|auto|long|true|case|goto|for|int|do|if)\\b"
+    },
+    {
+      "name": "entity.name.function",
+      "match": "\\b[A-Za-z_$][\\w$]*(?=\\s*\\()"
+    },
+    {
+      "name": "entity.name.type",
+      "match": "\\b[A-Z][A-Za-z0-9_$]*\\b"
+    },
+    {
+      "name": "constant.language",
+      "match": "\\b(?:true|false|null|undefined|None|nil|NaN|Infinity|NULL|NoneType)\\b"
+    }
+  ]
+}

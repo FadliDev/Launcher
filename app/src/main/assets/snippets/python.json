@@ -1,0 +1,22 @@
+{
+  "def": {
+    "prefix": "def",
+    "body": "def ${1:function_name}(${2:args}):\n    $0",
+    "description": "Function definition"
+  },
+  "print": {
+    "prefix": "print",
+    "body": "print(${1:\"Hello, world!\"})",
+    "description": "Print"
+  },
+  "ifmain": {
+    "prefix": "ifmain",
+    "body": "if __name__ == \"__main__\":\n    $0",
+    "description": "Main guard"
+  },
+  "class": {
+    "prefix": "class",
+    "body": "class ${1:ClassName}:\n    def __init__(self${2:, args}):\n        $0",
+    "description": "Class definition"
+  }
+}

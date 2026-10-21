@@ -1,0 +1,67 @@
+{
+  "scopeName": "source.js",
+  "patterns": [
+    {
+      "name": "comment.block",
+      "begin": "/\\*",
+      "end": "\\*/"
+    },
+    {
+      "name": "comment.line.double-slash",
+      "match": "//.*$"
+    },
+    {
+      "name": "string.quoted.double",
+      "begin": "\"",
+      "end": "\"",
+      "patterns": [
+        {
+          "name": "constant.character.escape",
+          "match": "\\\\."
+        }
+      ]
+    },
+    {
+      "name": "string.quoted.single",
+      "begin": "'",
+      "end": "'",
+      "patterns": [
+        {
+          "name": "constant.character.escape",
+          "match": "\\\\."
+        }
+      ]
+    },
+    {
+      "name": "string.quoted.backtick",
+      "begin": "`",
+      "end": "`",
+      "patterns": [
+        {
+          "name": "constant.character.escape",
+          "match": "\\\\."
+        }
+      ]
+    },
+    {
+      "name": "constant.numeric",
+      "match": "\\b(?:0[xX][0-9a-fA-F]+|0[bB][01]+|\\d+(?:\\.\\d+)?(?:[eE][+-]?\\d+)?)\\b"
+    },
+    {
+      "name": "keyword.control",
+      "match": "\\b(?:instanceof|undefined|function|debugger|continue|finally|default|extends|static|switch|import|typeof|return|delete|export|break|while|false|yield|const|class|super|throw|catch|await|async|void|from|else|null|with|true|case|this|get|new|try|for|var|let|set|in|of|do|if)\\b"
+    },
+    {
+      "name": "entity.name.function",
+      "match": "\\b[A-Za-z_$][\\w$]*(?=\\s*\\()"
+    },
+    {
+      "name": "entity.name.type",
+      "match": "\\b[A-Z][A-Za-z0-9_$]*\\b"
+    },
+    {
+      "name": "constant.language",
+      "match": "\\b(?:true|false|null|undefined|None|nil|NaN|Infinity|NULL|NoneType)\\b"
+    }
+  ]
+}

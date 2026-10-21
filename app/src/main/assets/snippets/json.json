@@ -1,0 +1,12 @@
+{
+  "object": {
+    "prefix": "obj",
+    "body": "{\n    \"${1:key}\": ${2:\"value\"}\n}",
+    "description": "JSON object"
+  },
+  "array": {
+    "prefix": "arr",
+    "body": "[\n    ${1:\"item\"}\n]",
+    "description": "JSON array"
+  }
+}
