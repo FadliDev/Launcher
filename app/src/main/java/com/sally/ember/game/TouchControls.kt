@@ -163,13 +163,32 @@ internal class Joystick(ctx: Context) : View(ctx) {
  * Tap = left click, long-press = drag, two-finger tap = right click, two-finger swipe = scroll.
  */
 internal class LookView(ctx: Context) : View(ctx) {
-    var directTouch = false
+    // Menu taps should behave like a real pointer: put the cursor under the finger by default.
+    // Users should not need to discover/toggle a hidden touchpad mode just to click Minecraft menus.
+    var directTouch = true
     /** Physical mouse/trackpad handler; mouse-sourced touches bypass the finger gestures below. */
     var mouse: MouseInput? = null
     private val d = resources.displayMetrics.density
     private val slop = ViewConfiguration.get(ctx).scaledTouchSlop.toFloat()
     private val camSens = 1.1f
     private val padSens = 1.5f
+
+    /** Convert overlay-local pixels into the GLFW window coordinate space. */
+    private fun windowX(x: Float): Float {
+        val viewW = width.coerceAtLeast(1).toFloat()
+        val windowW = (CB.windowWidth - 1).coerceAtLeast(0).toFloat()
+        return (x * windowW / viewW).coerceIn(0f, windowW)
+    }
+
+    private fun windowY(y: Float): Float {
+        val viewH = height.coerceAtLeast(1).toFloat()
+        val windowH = (CB.windowHeight - 1).coerceAtLeast(0).toFloat()
+        return (y * windowH / viewH).coerceIn(0f, windowH)
+    }
+
+    private fun movePointerToFinger(x: Float, y: Float) {
+        CB.sendCursorPos(windowX(x), windowY(y))
+    }
     private val LONG_PRESS_MS = 350L
 
     private var id = -1
@@ -188,33 +207,13 @@ internal class LookView(ctx: Context) : View(ctx) {
     private val fill = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.WHITE }
     private val edge = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; color = Color.BLACK; strokeWidth = 1.5f * d }
 
-    private fun toWindowX(x: Float): Float =
-        if (width > 0 && CB.windowWidth > 0) x * CB.windowWidth / width else x
-
-    private fun toWindowY(y: Float): Float =
-        if (height > 0 && CB.windowHeight > 0) y * CB.windowHeight / height else y
-
-    private fun fromWindowX(x: Float): Float =
-        if (CB.windowWidth > 0) x * width / CB.windowWidth else x
-
-    private fun fromWindowY(y: Float): Float =
-        if (CB.windowHeight > 0) y * height / CB.windowHeight else y
-
-    private fun placePointer(x: Float, y: Float) {
-        CB.sendCursorPos(
-            toWindowX(x).coerceIn(0f, (CB.windowWidth - 1).coerceAtLeast(0).toFloat()),
-            toWindowY(y).coerceIn(0f, (CB.windowHeight - 1).coerceAtLeast(0).toFloat())
-        )
-    }
-
     override fun onDraw(c: Canvas) {
         if (CB.isGrabbing()) return
-        if (id == -1) CB.syncCursorFromGame()
-        // GLFW coordinates are surface pixels; Android overlay coordinates may differ after insets/scaling.
-        c.save(); c.translate(fromWindowX(CB.mouseX), fromWindowY(CB.mouseY))
+        if (id == -1) CB.syncCursorFromGame() // game may have recentred it (menu opened); not while a finger is steering it
+        c.save(); c.translate(CB.mouseX, CB.mouseY)
         c.drawPath(arrow, fill); c.drawPath(arrow, edge)
         c.restore()
-        postInvalidateOnAnimation()
+        postInvalidateOnAnimation() // the game can move the cursor itself (e.g. recentre), so keep redrawing in menus
     }
 
     private fun avgY(e: MotionEvent): Float { var s = 0f; for (i in 0 until e.pointerCount) s += e.getY(i); return s / e.pointerCount }
@@ -225,7 +224,9 @@ internal class LookView(ctx: Context) : View(ctx) {
             MotionEvent.ACTION_DOWN -> {
                 id = e.getPointerId(0); lastX = e.x; lastY = e.y; downX = e.x; downY = e.y; downAt = e.eventTime
                 moved = false; holding = false; multi = false; scrolled = false; noTap = false; scrollAcc = 0f
-                if (!CB.isGrabbing()) { if (directTouch) placePointer(e.x, e.y) else CB.syncCursorFromGame() }
+                if (!CB.isGrabbing()) {
+                    if (directTouch) movePointerToFinger(e.x, e.y) else CB.syncCursorFromGame()
+                }
                 postDelayed(longPress, LONG_PRESS_MS)
             }
             MotionEvent.ACTION_POINTER_DOWN -> if (!multi) {
@@ -250,16 +251,14 @@ internal class LookView(ctx: Context) : View(ctx) {
                 val dx = x - lastX; val dy = y - lastY
                 if (!moved && hypot(x - downX, y - downY) > slop) { moved = true; if (!holding) removeCallbacks(longPress) }
                 lastX = x; lastY = y
-                val sx = if (width > 0 && CB.windowWidth > 0) CB.windowWidth.toFloat() / width else 1f
-                val sy = if (height > 0 && CB.windowHeight > 0) CB.windowHeight.toFloat() / height else 1f
                 if (CB.isGrabbing()) {
-                    if (moved || holding) CB.sendCursorPos(CB.mouseX + dx * camSens * sx, CB.mouseY + dy * camSens * sy)
+                    if (moved || holding) CB.sendCursorPos(CB.mouseX + dx * camSens, CB.mouseY + dy * camSens)
                 } else if (directTouch) {
-                    placePointer(x, y)
+                    movePointerToFinger(x, y)
                 } else {
                     CB.sendCursorPos(
-                        (CB.mouseX + dx * padSens * sx).coerceIn(0f, (CB.windowWidth - 1).coerceAtLeast(0).toFloat()),
-                        (CB.mouseY + dy * padSens * sy).coerceIn(0f, (CB.windowHeight - 1).coerceAtLeast(0).toFloat())
+                        (CB.mouseX + dx * padSens).coerceIn(0f, (CB.windowWidth - 1).coerceAtLeast(0).toFloat()),
+                        (CB.mouseY + dy * padSens).coerceIn(0f, (CB.windowHeight - 1).coerceAtLeast(0).toFloat())
                     )
                 }
             }
@@ -271,6 +270,11 @@ internal class LookView(ctx: Context) : View(ctx) {
             }
             MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
                 removeCallbacks(longPress)
+                if (e.actionMasked == MotionEvent.ACTION_UP && !CB.isGrabbing() && directTouch) {
+                    // Reassert the final location immediately before click; Minecraft may recenter its cursor
+                    // between frames, and the visible overlay cursor must match the actual GLFW click.
+                    movePointerToFinger(e.x, e.y)
+                }
                 if (holding) { Held.mouse(MOUSE_LEFT, false); holding = false }
                 else if (e.actionMasked == MotionEvent.ACTION_UP && !moved && !noTap && e.eventTime - downAt < LONG_PRESS_MS) {
                     Held.click(MOUSE_LEFT)
