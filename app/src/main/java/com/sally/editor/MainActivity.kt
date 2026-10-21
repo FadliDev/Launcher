@@ -24,6 +24,8 @@ import com.google.android.material.color.DynamicColors
 import java.io.BufferedReader
 import java.io.InputStreamReader
 
+private data class EditorSnapshot(val text: String, val cursor: Int)
+
 class MainActivity : AppCompatActivity() {
     private lateinit var editor: EditText
     private lateinit var lineNumbers: LineNumberView
@@ -33,6 +35,9 @@ class MainActivity : AppCompatActivity() {
     private var currentName = "Untitled.txt"
     private var dirty = false
     private var suppressDirty = false
+    private var applyingHistory = false
+    private val undoStack = ArrayDeque<EditorSnapshot>()
+    private val redoStack = ArrayDeque<EditorSnapshot>()
 
     private val openDocument = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) {
@@ -89,6 +94,18 @@ class MainActivity : AppCompatActivity() {
             setOnClickListener { saveFile() }
         }
         fileHeader.addView(saveButton)
+        val undoButton = MaterialButton(this, null, com.google.android.material.R.attr.materialButtonOutlinedStyle).apply {
+            text = "Undo"
+            isAllCaps = false
+            setOnClickListener { undo() }
+        }
+        fileHeader.addView(undoButton)
+        val redoButton = MaterialButton(this, null, com.google.android.material.R.attr.materialButtonOutlinedStyle).apply {
+            text = "Redo"
+            isAllCaps = false
+            setOnClickListener { redo() }
+        }
+        fileHeader.addView(redoButton)
         root.addView(fileHeader)
 
         val editorArea = LinearLayout(this).apply {
@@ -110,16 +127,56 @@ class MainActivity : AppCompatActivity() {
             setBackgroundColor(android.graphics.Color.parseColor("#FFFBFE"))
             setHint("Start typing…")
             addTextChangedListener(object : TextWatcher {
-                override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+                override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {
+                    if (!applyingHistory && !suppressDirty && s != null) {
+                        undoStack.addLast(EditorSnapshot(s.toString(), selectionStart.coerceAtLeast(0)))
+                        while (undoStack.size > 100) undoStack.removeFirst()
+                        redoStack.clear()
+                    }
+                }
                 override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
                     if (!suppressDirty) dirty = true
                     updateStatus()
                     lineNumbers.lineCount = (s?.count { it == '\n' } ?: 0) + 1
                 }
                 override fun afterTextChanged(s: Editable?) {
-                    if (s != null) SyntaxHighlighter.apply(s, currentName)
+                    if (s != null) {
+                        if (!applyingHistory && !suppressDirty && selectionStart > 0 && selectionStart == selectionEnd) {
+                            val cursor = selectionStart
+                            val closer = when (s[cursor - 1]) {
+                                '(' -> ')'; '[' -> ']'; '{' -> '}'; '"' -> '"'; '\'' -> '\''; else -> null
+                            }
+                            if (closer != null && (cursor >= s.length || s[cursor] != closer)) {
+                                s.insert(cursor, closer.toString())
+                                setSelection(cursor)
+                            }
+                        }
+                        SyntaxHighlighter.apply(s, currentName)
+                    }
                 }
             })
+            setOnKeyListener { _, keyCode, event ->
+                if (event.action != android.view.KeyEvent.ACTION_DOWN) return@setOnKeyListener false
+                if (keyCode == android.view.KeyEvent.KEYCODE_TAB) {
+                    val start = selectionStart.coerceAtLeast(0)
+                    val end = selectionEnd.coerceAtLeast(start)
+                    text?.replace(start, end, "    ")
+                    setSelection(start + 4)
+                    return@setOnKeyListener true
+                }
+                if (keyCode == android.view.KeyEvent.KEYCODE_ENTER) {
+                    val cursor = selectionStart.coerceAtLeast(0)
+                    val content = text?.toString().orEmpty()
+                    val lineStart = content.lastIndexOf('\n', (cursor - 1).coerceAtLeast(0)) + 1
+                    val indent = content.substring(lineStart, cursor).takeWhile { it == ' ' || it == '\t' }
+                    post {
+                        val pos = selectionStart.coerceAtLeast(0)
+                        text?.insert(pos, indent)
+                        setSelection(pos + indent.length)
+                    }
+                }
+                false
+            }
         }
         editorArea.addView(lineNumbers, LinearLayout.LayoutParams(dp(42), -1))
         editorArea.addView(editor, LinearLayout.LayoutParams(0, -1, 1f))
@@ -182,6 +239,8 @@ class MainActivity : AppCompatActivity() {
         editor.setText("")
         suppressDirty = false
         dirty = false
+        undoStack.clear()
+        redoStack.clear()
         filename.text = currentName
         updateStatus()
     }
@@ -198,6 +257,8 @@ class MainActivity : AppCompatActivity() {
             suppressDirty = false
             editor.setSelection(editor.text.length)
             dirty = false
+            undoStack.clear()
+            redoStack.clear()
             filename.text = currentName
             SyntaxHighlighter.apply(editor.text, currentName)
             updateStatus()
@@ -231,6 +292,30 @@ class MainActivity : AppCompatActivity() {
         } catch (e: Exception) {
             toast("Couldn't save file: ${e.localizedMessage ?: "unknown error"}")
         }
+    }
+
+    private fun undo() {
+        if (undoStack.isEmpty()) { toast("Nothing to undo"); return }
+        redoStack.addLast(EditorSnapshot(editor.text.toString(), editor.selectionStart.coerceAtLeast(0)))
+        restoreSnapshot(undoStack.removeLast())
+    }
+
+    private fun redo() {
+        if (redoStack.isEmpty()) { toast("Nothing to redo"); return }
+        undoStack.addLast(EditorSnapshot(editor.text.toString(), editor.selectionStart.coerceAtLeast(0)))
+        restoreSnapshot(redoStack.removeLast())
+    }
+
+    private fun restoreSnapshot(snapshot: EditorSnapshot) {
+        applyingHistory = true
+        suppressDirty = true
+        editor.setText(snapshot.text)
+        editor.setSelection(snapshot.cursor.coerceIn(0, editor.text.length))
+        suppressDirty = false
+        applyingHistory = false
+        dirty = true
+        SyntaxHighlighter.apply(editor.text, currentName)
+        updateStatus()
     }
 
     private fun updateStatus() {
