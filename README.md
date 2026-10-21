@@ -7,6 +7,8 @@ Tahap 1 — fondasi Android native untuk text editor dan code editor.
 - Material Design 3 DayNight theme
 - Editor teks native berbasis `EditText` monospace
 - Buat dokumen baru, buka file melalui Android Storage Access Framework, simpan dan Save As
+- Gutter nomor baris yang mengikuti scroll editor
+- Syntax highlighting dasar untuk keyword, string, angka, dan komentar
 - Status bar editor: nomor baris, kolom, jumlah karakter, dan status perubahan
 - GitHub Actions workflow untuk build APK debug dan mengunggah artifact
 
@@ -22,7 +24,7 @@ Artifact lokal:
 `app/build/outputs/apk/debug/app-debug.apk`
 
 ## Tahap berikutnya
-1. Engine dokumen sendiri dengan undo/redo dan model tab.
-2. Nomor baris dan syntax highlighting terintegrasi.
-3. Autocomplete, bracket matching, pencarian dan replace.
+1. Model tab multi-file dan penyimpanan state per dokumen.
+2. Syntax highlighting berbasis bahasa/file extension yang lebih akurat.
+3. Undo/redo, bracket matching, autocomplete, pencarian dan replace.
 4. File explorer untuk direktori proyek.

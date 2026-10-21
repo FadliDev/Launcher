@@ -26,6 +26,7 @@ import java.io.InputStreamReader
 
 class MainActivity : AppCompatActivity() {
     private lateinit var editor: EditText
+    private lateinit var lineNumbers: LineNumberView
     private lateinit var status: TextView
     private lateinit var filename: TextView
     private var currentUri: Uri? = null
@@ -90,6 +91,14 @@ class MainActivity : AppCompatActivity() {
         fileHeader.addView(saveButton)
         root.addView(fileHeader)
 
+        val editorArea = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            setBackgroundColor(android.graphics.Color.parseColor("#FFFBFE"))
+        }
+        lineNumbers = LineNumberView(this).apply {
+            setPadding(dp(4), dp(12), dp(4), dp(24))
+            lineCount = 1
+        }
         editor = EditText(this).apply {
             setText("Welcome to Sally Text Editor!\n\nThis is your own native editing workspace.\n\n• Create a document with New\n• Open a text or source file\n• Edit and save your changes\n\nNext milestones: tabs, syntax highlighting, and autocomplete.")
             textSize = 15f
@@ -105,11 +114,17 @@ class MainActivity : AppCompatActivity() {
                 override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
                     if (!suppressDirty) dirty = true
                     updateStatus()
+                    lineNumbers.lineCount = (s?.count { it == '\n' } ?: 0) + 1
+                    if (s != null && s.isNotEmpty()) SyntaxHighlighter.apply(s)
                 }
                 override fun afterTextChanged(s: Editable?) {}
             })
         }
-        root.addView(editor, LinearLayout.LayoutParams(-1, 0, 1f))
+        editorArea.addView(lineNumbers, LinearLayout.LayoutParams(dp(42), -1))
+        editorArea.addView(editor, LinearLayout.LayoutParams(0, -1, 1f))
+        editor.setOnScrollChangeListener { _, _, scrollY, _, _ -> lineNumbers.verticalScrollPx = scrollY }
+        editor.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ -> lineNumbers.lineHeightPx = editor.lineHeight.toFloat() }
+        root.addView(editorArea, LinearLayout.LayoutParams(-1, 0, 1f))
 
         val bottom = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
@@ -218,6 +233,7 @@ class MainActivity : AppCompatActivity() {
     private fun updateStatus() {
         if (!::status.isInitialized || !::editor.isInitialized) return
         val text = editor.text
+        if (::lineNumbers.isInitialized) lineNumbers.lineCount = text.count { it == '\n' } + 1
         val cursor = editor.selectionStart.coerceAtLeast(0)
         val line = text.subSequence(0, cursor.coerceAtMost(text.length)).count { it == '\n' } + 1
         val lastNewline = text.toString().lastIndexOf('\n', (cursor - 1).coerceAtLeast(0))
