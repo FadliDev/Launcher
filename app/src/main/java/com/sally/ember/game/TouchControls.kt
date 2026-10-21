@@ -132,7 +132,8 @@ internal class Joystick(ctx: Context) : View(ctx) {
         Held.key(K.GLFW_KEY_A.toInt(), nx < -0.35f)
         Held.key(K.GLFW_KEY_D.toInt(), nx > 0.35f)
         val ctrl = K.GLFW_KEY_LEFT_CONTROL.toInt()
-        if (ny < -0.95f) Held.key(ctrl, true) else if (ny > -0.75f) Held.key(ctrl, false)
+        val edge = len >= maxR * 0.95f
+        if (edge && ny < -0.8f) Held.key(ctrl, true) else if (ny > -0.6f || !edge && ny > -0.8f) Held.key(ctrl, false)
         invalidate()
     }
 
@@ -162,8 +163,17 @@ internal class LookView(ctx: Context) : View(ctx) {
     private var moved = false; private var holding = false; private var multi = false
     private var scrolled = false; private var noTap = false
     private var scrollAcc = 0f; private var lastAvgY = 0f
+    private var secondDownAt = 0L
 
-    private val longPress = Runnable { if (!moved && !multi && id != -1) { holding = true; Held.mouse(MOUSE_LEFT, true) } }
+    /** Re-sends the drawn pointer position so the game's idea of the cursor (hover/highlight, click target) matches the arrow. */
+    fun syncCursor() {
+        if (CB.isGrabbing()) return
+        val x = CB.mouseX.coerceIn(0f, (CB.windowWidth - 1).coerceAtLeast(0).toFloat())
+        val y = CB.mouseY.coerceIn(0f, (CB.windowHeight - 1).coerceAtLeast(0).toFloat())
+        CB.sendCursorPos(x, y)
+    }
+
+    private val longPress = Runnable { if (!moved && !multi && id != -1) { syncCursor(); holding = true; Held.mouse(MOUSE_LEFT, true) } }
 
     private val arrow = Path().apply {
         moveTo(0f, 0f); lineTo(0f, 22f * d); lineTo(5f * d, 17.5f * d); lineTo(9f * d, 26f * d)
@@ -187,18 +197,18 @@ internal class LookView(ctx: Context) : View(ctx) {
             MotionEvent.ACTION_DOWN -> {
                 id = e.getPointerId(0); lastX = e.x; lastY = e.y; downX = e.x; downY = e.y; downAt = e.eventTime
                 moved = false; holding = false; multi = false; scrolled = false; noTap = false; scrollAcc = 0f
-                if (!CB.isGrabbing() && directTouch) CB.sendCursorPos(e.x, e.y)
+                if (!CB.isGrabbing()) { if (directTouch) CB.sendCursorPos(e.x, e.y) else syncCursor() }
                 postDelayed(longPress, 350)
             }
             MotionEvent.ACTION_POINTER_DOWN -> if (!multi) {
-                multi = true; scrolled = false; noTap = true
+                multi = true; scrolled = false; noTap = true; secondDownAt = e.eventTime
                 removeCallbacks(longPress)
                 if (holding) { Held.mouse(MOUSE_LEFT, false); holding = false }
                 lastAvgY = avgY(e); scrollAcc = 0f
             }
             MotionEvent.ACTION_MOVE -> {
-                if (multi) {
-                    if (!CB.isGrabbing() && e.pointerCount >= 2) {
+                if (multi && !CB.isGrabbing()) {
+                    if (e.pointerCount >= 2) {
                         val a = avgY(e); scrollAcc += a - lastAvgY; lastAvgY = a
                         val step = 36f * d
                         while (scrollAcc > step) { CB.sendScroll(0.0, 1.0); scrollAcc -= step; scrolled = true }
@@ -213,7 +223,7 @@ internal class LookView(ctx: Context) : View(ctx) {
                 if (!moved && hypot(x - downX, y - downY) > slop) { moved = true; if (!holding) removeCallbacks(longPress) }
                 lastX = x; lastY = y
                 if (CB.isGrabbing()) {
-                    if (moved || holding) CB.sendCursorPos(CB.mouseX + dx * camSens, CB.mouseY + dy * camSens)
+                    CB.sendCursorPos(CB.mouseX + dx * camSens, CB.mouseY + dy * camSens)
                 } else if (directTouch) {
                     CB.sendCursorPos(x, y)
                 } else {
@@ -224,7 +234,7 @@ internal class LookView(ctx: Context) : View(ctx) {
                 }
             }
             MotionEvent.ACTION_POINTER_UP -> if (multi && e.pointerCount == 2) {
-                if (!scrolled) { Held.mouse(MOUSE_RIGHT, true); Held.mouse(MOUSE_RIGHT, false) } // two-finger tap = right click / use
+                if (!scrolled && e.eventTime - secondDownAt < 250) { syncCursor(); Held.mouse(MOUSE_RIGHT, true); Held.mouse(MOUSE_RIGHT, false) } // quick 2nd-finger tap = right click / use
                 val rem = if (e.actionIndex == 0) 1 else 0
                 id = e.getPointerId(rem); lastX = e.getX(rem); lastY = e.getY(rem)
                 moved = true; multi = false
@@ -233,6 +243,7 @@ internal class LookView(ctx: Context) : View(ctx) {
                 removeCallbacks(longPress)
                 if (holding) { Held.mouse(MOUSE_LEFT, false); holding = false }
                 else if (e.actionMasked == MotionEvent.ACTION_UP && !moved && !noTap && e.eventTime - downAt < 300) {
+                    syncCursor()
                     Held.mouse(MOUSE_LEFT, true); Held.mouse(MOUSE_LEFT, false)
                 }
                 id = -1; multi = false; noTap = false
@@ -312,6 +323,7 @@ internal class TouchControls(ctx: Context, onKeyboard: () -> Unit) : FrameLayout
         gameViews.forEach { it.visibility = if (grabbing) View.VISIBLE else View.GONE }
         menuViews.forEach { it.visibility = if (grabbing) View.GONE else View.VISIBLE }
         look.invalidate()
+        if (!grabbing) { look.post { look.syncCursor() }; look.postDelayed({ look.syncCursor() }, 150) }
     }
 
     /** Lifts every held key/button (menu opened, controls hidden, JVM gone). */

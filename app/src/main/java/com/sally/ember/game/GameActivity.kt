@@ -85,6 +85,17 @@ class GameActivity : Activity(), SurfaceHolder.Callback {
         tailLog()
     }
 
+    // Never leave a key or mouse button stuck down when the app loses focus (notification shade, app switch, screen off).
+    override fun onPause() {
+        if (::controls.isInitialized) controls.releaseAll()
+        super.onPause()
+    }
+
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        if (!hasFocus && ::controls.isInitialized) controls.releaseAll()
+    }
+
     override fun onDestroy() {
         CallbackBridge.removeGrabListener(grabListener)
         super.onDestroy()
