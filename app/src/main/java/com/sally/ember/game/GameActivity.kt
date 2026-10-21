@@ -7,6 +7,7 @@ import android.os.Handler
 import android.os.Looper
 import android.view.*
 import android.widget.FrameLayout
+import android.widget.ScrollView
 import android.widget.TextView
 import com.sally.ember.data.Paths
 import com.sally.ember.data.Prefs
@@ -24,6 +25,9 @@ class GameActivity : Activity(), SurfaceHolder.Callback {
     private val ui = Handler(Looper.getMainLooper())
     private var started = false
     private var logVisible = true
+    private var exited = false
+    private lateinit var logScroll: ScrollView
+    private lateinit var closeBtn: TextView
 
     // touch state
     private var lastX = 0f; private var lastY = 0f; private var downAt = 0L; private var moved = false
@@ -41,10 +45,17 @@ class GameActivity : Activity(), SurfaceHolder.Callback {
             setTextColor(Color.rgb(184, 247, 200)); textSize = 9f; typeface = android.graphics.Typeface.MONOSPACE
             setBackgroundColor(Color.argb(150, 0, 0, 0)); setPadding(12, 12, 12, 12)
         }
-        root.addView(logView, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.WRAP_CONTENT, Gravity.TOP))
+        logScroll = ScrollView(this).apply { addView(logView) }
+        root.addView(logScroll, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, (resources.displayMetrics.heightPixels * 0.75).toInt(), Gravity.TOP))
+        closeBtn = TextView(this).apply {
+            text = "TUTUP"; setTextColor(Color.WHITE); setPadding(24, 12, 24, 12); setBackgroundColor(Color.argb(200, 160, 30, 30)); visibility = View.GONE
+            setOnClickListener { closeGame() }
+        }
+        root.addView(closeBtn, FrameLayout.LayoutParams(FrameLayout.LayoutParams.WRAP_CONTENT, FrameLayout.LayoutParams.WRAP_CONTENT, Gravity.BOTTOM or Gravity.START))
+        ExitReporter.onExit = { code, sig -> runOnUiThread { onJvmExit("JVM exit code=$code${if (sig) " (signal)" else ""}") } }
         root.addView(TextView(this).apply {
             text = "LOG"; setTextColor(Color.WHITE); setPadding(24, 12, 24, 12); setBackgroundColor(Color.argb(120, 0, 0, 0))
-            setOnClickListener { logVisible = !logVisible; logView.visibility = if (logVisible) View.VISIBLE else View.GONE }
+            setOnClickListener { logVisible = !logVisible; logScroll.visibility = if (logVisible) View.VISIBLE else View.GONE }
         }, FrameLayout.LayoutParams(FrameLayout.LayoutParams.WRAP_CONTENT, FrameLayout.LayoutParams.WRAP_CONTENT, Gravity.BOTTOM or Gravity.END))
         setContentView(root)
         window.insetsController?.let { it.hide(WindowInsets.Type.systemBars()); it.systemBarsBehavior = WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE }
@@ -52,9 +63,23 @@ class GameActivity : Activity(), SurfaceHolder.Callback {
     }
 
     private fun tailLog() {
-        logView.text = runCatching { Paths.logFile.readText().takeLast(1500) }.getOrDefault("")
+        val t = runCatching { Paths.logFile.readText().takeLast(12000) }.getOrDefault("")
+        if (t != logView.text.toString()) {
+            logView.text = t
+            if (!exited) logScroll.post { logScroll.fullScroll(View.FOCUS_DOWN) }
+        }
         ui.postDelayed(::tailLog, 700)
     }
+
+    /** Keeps the log on screen after the JVM ends so the error can be read; the user closes manually. */
+    private fun onJvmExit(msg: String) {
+        exited = true
+        logVisible = true; logScroll.visibility = View.VISIBLE
+        closeBtn.visibility = View.VISIBLE
+        logScroll.post { logScroll.fullScroll(View.FOCUS_DOWN) }
+    }
+
+    private fun closeGame() { finishAndRemoveTask(); android.os.Process.killProcess(android.os.Process.myPid()) }
 
     override fun surfaceCreated(holder: SurfaceHolder) {}
 
@@ -71,6 +96,7 @@ class GameActivity : Activity(), SurfaceHolder.Callback {
                 val code = try { GameLauncher.launch(this, version, acc, prefs, w, h) }
                 catch (t: Throwable) { Paths.logFile.appendText("\nLauncher error: ${android.util.Log.getStackTraceString(t)}\n"); -99 }
                 Paths.logFile.appendText("\n[JVM exited with code $code]\n")
+                runOnUiThread { onJvmExit("JVM exited with code $code") }
             }
         } else {
             runCatching { CallbackBridge.sendUpdateWindowSize(w, h) }
@@ -111,6 +137,7 @@ class GameActivity : Activity(), SurfaceHolder.Callback {
 
     @Deprecated("Back = Escape in game")
     override fun onBackPressed() {
+        if (exited) { closeGame(); return }
         CallbackBridge.sendKeyPress(LwjglGlfwKeycode.GLFW_KEY_ESCAPE.toInt(), 0, true)
         CallbackBridge.sendKeyPress(LwjglGlfwKeycode.GLFW_KEY_ESCAPE.toInt(), 0, false)
     }
