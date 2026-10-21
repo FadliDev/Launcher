@@ -23,7 +23,7 @@ android {
     kotlinOptions { jvmTarget = "17" }
     buildFeatures { compose = true; prefab = true }
     packaging { jniLibs { useLegacyPackaging = true; pickFirsts += listOf("**/libbytehook.so", "**/libc++_shared.so") } }
-    androidResources { noCompress += listOf("xz", "zip") }
+    androidResources { noCompress += listOf("xz", "zip", "jar") }
 }
 dependencies {
     implementation(fileTree(mapOf("dir" to "libs", "include" to listOf("*.jar", "*.aar"))))

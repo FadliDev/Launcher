@@ -3,17 +3,30 @@ package com.sally.ember.data
 import kotlinx.coroutines.*
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
+import okhttp3.ConnectionPool
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
+import java.io.IOException
 import java.security.MessageDigest
+import java.util.concurrent.TimeUnit
 
 object Mojang {
     private const val MANIFEST = "https://piston-meta.mojang.com/mc/game/version_manifest_v2.json"
     private const val RESOURCES = "https://resources.download.minecraft.net/"
-    private val http = OkHttpClient()
+    // Default OkHttp read timeout is 10s and there is no resume, which is what made big installs fail on mobile data.
+    private val http = OkHttpClient.Builder()
+        .connectTimeout(20, TimeUnit.SECONDS)
+        .readTimeout(45, TimeUnit.SECONDS)
+        .writeTimeout(30, TimeUnit.SECONDS)
+        .callTimeout(0, TimeUnit.MILLISECONDS) // no overall cap: large jars on slow links must not be cut off
+        .retryOnConnectionFailure(true)
+        .connectionPool(ConnectionPool(16, 5, TimeUnit.MINUTES))
+        .build()
+    private const val PARALLEL = 8
+    private const val ATTEMPTS = 5
 
     suspend fun manifest(): List<McVersion> = withContext(Dispatchers.IO) {
         val arr = JSONObject(getText(MANIFEST)).getJSONArray("versions")
@@ -48,17 +61,34 @@ object Mojang {
             items += Item(RESOURCES + hash.take(2) + "/" + hash, File(Paths.assets, "objects/${hash.take(2)}/$hash"), hash)
         }
 
+        val todo = items.filterNot { isValid(it) }
         val total = items.size
-        var done = 0
-        val gate = Semaphore(12)
-        coroutineScope {
-            items.map { j ->
-                async {
-                    gate.withPermit { fetch(j) }
-                    synchronized(this@Mojang) { done++; if (done % 20 == 0 || done == total) progress(v.id, done, total) }
-                }
-            }.awaitAll()
+        var done = total - todo.size
+        progress(v.id, done, total)
+
+        // Round 1 runs in parallel; anything that still fails is retried slowly in round 2 instead of aborting the whole install.
+        var failed = download(todo, PARALLEL) { synchronized(this@Mojang) { done++; if (done % 20 == 0 || done == total) progress(v.id, done, total) } }
+        if (failed.isNotEmpty()) {
+            delay(3000)
+            failed = download(failed.map { it.first }, 3) { synchronized(this@Mojang) { done++; if (done % 20 == 0 || done == total) progress(v.id, done, total) } }
         }
+        if (failed.isNotEmpty()) {
+            val (item, e) = failed.first()
+            throw IOException("${failed.size} file gagal diunduh (koneksi lambat/timeout). Coba lagi, file yang sudah selesai tidak diunduh ulang. ${item.url}: ${e.message}", e)
+        }
+    }
+
+    private suspend fun download(items: List<Item>, parallel: Int, onDone: () -> Unit): List<Pair<Item, Throwable>> = coroutineScope {
+        val gate = Semaphore(parallel)
+        items.map { j ->
+            async {
+                gate.withPermit {
+                    runCatching { fetch(j) }
+                        .onSuccess { onDone() }
+                        .exceptionOrNull()?.let { if (it is CancellationException) throw it; j to it }
+                }
+            }
+        }.awaitAll().filterNotNull()
     }
 
     /** (url, relativePath, sha1) for every library the JVM needs. LWJGL natives jars are skipped (Android natives come from the APK). */
@@ -89,23 +119,49 @@ object Mojang {
         return ok
     }
 
+    private fun isValid(j: Item) = j.file.exists() && (j.sha1.isEmpty() || sha1(j.file) == j.sha1)
+
+    /** Downloads to <file>.part, resuming with a Range request after a timeout/drop, then verifies SHA-1 and renames. */
     private fun fetch(j: Item) {
-        if (j.file.exists() && (j.sha1.isEmpty() || sha1(j.file) == j.sha1)) return
+        if (isValid(j)) return
         j.file.parentFile!!.mkdirs()
-        repeat(3) { attempt ->
-            runCatching {
-                http.newCall(Request.Builder().url(j.url).build()).execute().use { r ->
+        val part = File(j.file.path + ".part")
+        var last: Throwable? = null
+        for (attempt in 0 until ATTEMPTS) {
+            try {
+                val have = if (part.exists()) part.length() else 0L
+                val req = Request.Builder().url(j.url).apply { if (have > 0) header("Range", "bytes=$have-") }.build()
+                http.newCall(req).execute().use { r ->
+                    if (r.code == 416) { part.delete(); throw IOException("HTTP 416, restart") }
                     check(r.isSuccessful) { "HTTP ${r.code} ${j.url}" }
-                    val tmp = File(j.file.path + ".part")
-                    r.body!!.byteStream().use { i -> tmp.outputStream().use { o -> i.copyTo(o) } }
-                    check(tmp.renameTo(j.file)) { "rename failed" }
+                    val append = r.code == 206 && have > 0
+                    r.body!!.byteStream().use { i -> java.io.FileOutputStream(part, append).use { o -> i.copyTo(o, 32 * 1024) } }
                 }
-            }.onSuccess { return }.onFailure { if (attempt == 2) throw it }
+                if (j.sha1.isNotEmpty() && sha1(part) != j.sha1) { part.delete(); throw IOException("SHA-1 mismatch ${j.url}") }
+                j.file.delete()
+                check(part.renameTo(j.file)) { "rename failed ${j.file}" }
+                return
+            } catch (e: IOException) {          // timeouts, resets, bad hash: retry (partial data is kept for resume)
+                last = e
+            } catch (e: IllegalStateException) { // non-2xx
+                last = e
+                if (e.message?.startsWith("HTTP 4") == true && !e.message!!.startsWith("HTTP 408") && !e.message!!.startsWith("HTTP 429")) throw e
+            }
+            Thread.sleep(minOf(1000L shl attempt, 8000L))
         }
+        throw last ?: IOException("download failed ${j.url}")
     }
 
-    private fun getText(url: String): String =
-        http.newCall(Request.Builder().url(url).build()).execute().use { check(it.isSuccessful) { "HTTP ${it.code}" }; it.body!!.string() }
+    private fun getText(url: String): String {
+        var last: Throwable? = null
+        for (attempt in 0 until ATTEMPTS) {
+            try {
+                return http.newCall(Request.Builder().url(url).build()).execute().use { check(it.isSuccessful) { "HTTP ${it.code}" }; it.body!!.string() }
+            } catch (e: IOException) { last = e } catch (e: IllegalStateException) { last = e }
+            Thread.sleep(minOf(1000L shl attempt, 8000L))
+        }
+        throw last!!
+    }
 
     private fun sha1(f: File): String {
         val md = MessageDigest.getInstance("SHA-1")

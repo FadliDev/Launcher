@@ -39,10 +39,11 @@ object JreManager {
     /** LWJGL's GLFW stub classes (override the stock GLFW so input/windowing goes through the bridge). */
     fun ensureGlfwJar(ctx: Context): File {
         val out = File(Paths.lwjgl, "lwjgl-glfw-classes.jar")
-        val len = ctx.assets.openFd("components/lwjgl3/lwjgl-glfw-classes.jar").use { it.length }
-        if (!out.exists() || out.length() != len) {
+        // Don't use openFd(): it throws FileNotFoundException for assets AAPT compressed (".jar" isn't in noCompress).
+        val bytes = ctx.assets.open("components/lwjgl3/lwjgl-glfw-classes.jar").use { it.readBytes() }
+        if (!out.exists() || out.length() != bytes.size.toLong()) {
             out.parentFile!!.mkdirs()
-            ctx.assets.open("components/lwjgl3/lwjgl-glfw-classes.jar").use { i -> out.outputStream().use { i.copyTo(it) } }
+            out.writeBytes(bytes)
         }
         return out
     }
