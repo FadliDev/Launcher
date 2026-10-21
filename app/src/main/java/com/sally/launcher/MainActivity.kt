@@ -51,6 +51,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.sally.launcher.data.MinecraftVersion
 import com.sally.launcher.data.MinecraftVersionRepository
 import com.sally.launcher.data.InstallResult
@@ -124,7 +125,7 @@ private fun LauncherScreen(repository: MinecraftVersionRepository) {
                     Icon(Icons.Rounded.SportsEsports, contentDescription = null, tint = Ink)
                 }
                 Column {
-                    Text("SALLY", fontWeight = FontWeight.Black, letterSpacing = 2.2f)
+                    Text("SALLY", fontWeight = FontWeight.Black, letterSpacing = 2.2.sp)
                     Text("JAVA LAUNCHER · EARLY BUILD", style = MaterialTheme.typography.labelSmall, color = SoftText)
                 }
             }
@@ -234,7 +235,7 @@ private fun LauncherScreen(repository: MinecraftVersionRepository) {
 
 @Composable
 private fun SectionHeading(eyebrow: String, title: String) {
-    Text(eyebrow, color = Mint, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, letterSpacing = 1.5f)
+    Text(eyebrow, color = Mint, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, letterSpacing = 1.5.sp)
     Text(title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
 }
 
