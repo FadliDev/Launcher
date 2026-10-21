@@ -5,12 +5,19 @@ import android.graphics.Color
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.text.Editable
+import android.text.InputType
+import android.text.TextWatcher
 import android.view.*
+import android.view.inputmethod.EditorInfo
+import android.view.inputmethod.InputMethodManager
+import android.widget.EditText
 import android.widget.FrameLayout
 import android.widget.ScrollView
 import android.widget.TextView
 import com.sally.ember.data.Paths
 import com.sally.ember.data.Prefs
+import net.kdt.pojavlaunch.GrabListener
 import net.kdt.pojavlaunch.LwjglGlfwKeycode
 import net.kdt.pojavlaunch.utils.JREUtils
 import org.lwjgl.glfw.CallbackBridge
@@ -18,48 +25,77 @@ import kotlin.concurrent.thread
 
 /**
  * Runs in the ":game" process. Hosts the Surface that libpojavexec renders into, starts the JVM once
- * the Surface exists, and turns touches into GLFW mouse events.
+ * the Surface exists, and hosts the touch controls (joystick, buttons, mouse pointer) on top of it.
  */
 class GameActivity : Activity(), SurfaceHolder.Callback {
     private lateinit var logView: TextView
+    private lateinit var logScroll: ScrollView
+    private lateinit var closeBtn: TextView
+    private lateinit var controls: TouchControls
+    private lateinit var kbInput: EditText
     private val ui = Handler(Looper.getMainLooper())
     private var started = false
     private var logVisible = true
     private var exited = false
-    private lateinit var logScroll: ScrollView
-    private lateinit var closeBtn: TextView
+    private var autoHidden = false
+    private var kbOn = false
+    private var kbResetting = false
 
-    // touch state
-    private var lastX = 0f; private var lastY = 0f; private var downAt = 0L; private var moved = false
-    private var holding = false
-    private val longPress = Runnable { if (!moved) { holding = true; CallbackBridge.sendMouseButton(LwjglGlfwKeycode.GLFW_MOUSE_BUTTON_LEFT.toInt(), true) } }
+    private val grabListener = GrabListener { grabbing -> runOnUiThread { if (::controls.isInitialized) controls.setGrabbing(grabbing) } }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         Paths.init(this)
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        // The soft keyboard must never resize the window: that would resize the GL surface mid-game.
+        window.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_NOTHING)
         val root = FrameLayout(this)
         val sv = SurfaceView(this).also { it.holder.addCallback(this) }
         root.addView(sv)
+
         logView = TextView(this).apply {
             setTextColor(Color.rgb(184, 247, 200)); textSize = 9f; typeface = android.graphics.Typeface.MONOSPACE
             setBackgroundColor(Color.argb(150, 0, 0, 0)); setPadding(12, 12, 12, 12)
         }
         logScroll = ScrollView(this).apply { addView(logView) }
         root.addView(logScroll, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, (resources.displayMetrics.heightPixels * 0.75).toInt(), Gravity.TOP))
+
+        controls = TouchControls(this) { toggleKeyboard() }
+        root.addView(controls, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))
+
+        // Hidden field that receives soft-keyboard input and forwards it to the game as GLFW char/key events.
+        kbInput = buildKeyboardInput()
+        root.addView(kbInput, FrameLayout.LayoutParams(2, 2, Gravity.BOTTOM or Gravity.START))
+
         closeBtn = TextView(this).apply {
             text = "TUTUP"; setTextColor(Color.WHITE); setPadding(24, 12, 24, 12); setBackgroundColor(Color.argb(200, 160, 30, 30)); visibility = View.GONE
             setOnClickListener { closeGame() }
         }
         root.addView(closeBtn, FrameLayout.LayoutParams(FrameLayout.LayoutParams.WRAP_CONTENT, FrameLayout.LayoutParams.WRAP_CONTENT, Gravity.BOTTOM or Gravity.START))
-        ExitReporter.onExit = { code, sig -> runOnUiThread { onJvmExit("JVM exit code=$code${if (sig) " (signal)" else ""}") } }
         root.addView(TextView(this).apply {
             text = "LOG"; setTextColor(Color.WHITE); setPadding(24, 12, 24, 12); setBackgroundColor(Color.argb(120, 0, 0, 0))
-            setOnClickListener { logVisible = !logVisible; logScroll.visibility = if (logVisible) View.VISIBLE else View.GONE }
-        }, FrameLayout.LayoutParams(FrameLayout.LayoutParams.WRAP_CONTENT, FrameLayout.LayoutParams.WRAP_CONTENT, Gravity.BOTTOM or Gravity.END))
+            setOnClickListener { logVisible = !logVisible; applyLogVisibility() }
+        }, FrameLayout.LayoutParams(FrameLayout.LayoutParams.WRAP_CONTENT, FrameLayout.LayoutParams.WRAP_CONTENT, Gravity.TOP or Gravity.START))
+
+        ExitReporter.onExit = { code, sig -> runOnUiThread { onJvmExit("JVM exit code=$code${if (sig) " (signal)" else ""}") } }
         setContentView(root)
         window.insetsController?.let { it.hide(WindowInsets.Type.systemBars()); it.systemBarsBehavior = WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE }
+        applyLogVisibility()
+        CallbackBridge.addGrabListener(grabListener)
         tailLog()
+    }
+
+    override fun onDestroy() {
+        CallbackBridge.removeGrabListener(grabListener)
+        super.onDestroy()
+    }
+
+    /** Log and controls are mutually exclusive: while the log is up (startup / crash) it must be scrollable. */
+    private fun applyLogVisibility() {
+        logScroll.visibility = if (logVisible) View.VISIBLE else View.GONE
+        val showControls = !logVisible && !exited
+        controls.visibility = if (showControls) View.VISIBLE else View.GONE
+        if (!showControls) controls.releaseAll()
     }
 
     private fun tailLog() {
@@ -68,18 +104,68 @@ class GameActivity : Activity(), SurfaceHolder.Callback {
             logView.text = t
             if (!exited) logScroll.post { logScroll.fullScroll(View.FOCUS_DOWN) }
         }
+        // Once Minecraft has opened its window, get the log out of the way so the controls are usable.
+        if (!autoHidden && !exited && (t.contains("Backend library") || t.contains("OpenAL initialized"))) {
+            autoHidden = true; logVisible = false; applyLogVisibility()
+        }
         ui.postDelayed(::tailLog, 700)
     }
 
     /** Keeps the log on screen after the JVM ends so the error can be read; the user closes manually. */
-    private fun onJvmExit(msg: String) {
+    private fun onJvmExit(@Suppress("UNUSED_PARAMETER") msg: String) {
         exited = true
-        logVisible = true; logScroll.visibility = View.VISIBLE
+        logVisible = true
+        applyLogVisibility()
         closeBtn.visibility = View.VISIBLE
         logScroll.post { logScroll.fullScroll(View.FOCUS_DOWN) }
     }
 
     private fun closeGame() { finishAndRemoveTask(); android.os.Process.killProcess(android.os.Process.myPid()) }
+
+    // ---- soft keyboard -> GLFW ----
+
+    private fun buildKeyboardInput() = EditText(this).apply {
+        alpha = 0.01f
+        inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS or InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD
+        imeOptions = EditorInfo.IME_FLAG_NO_EXTRACT_UI or EditorInfo.IME_ACTION_SEND
+        setText(SENTINEL); setSelection(text.length)
+        setOnEditorActionListener { _, _, _ -> CallbackBridge.sendKeyPress(LwjglGlfwKeycode.GLFW_KEY_ENTER.toInt()); true }
+        setOnKeyListener { _, code, ev ->
+            if (ev.action == KeyEvent.ACTION_DOWN && code == KeyEvent.KEYCODE_ENTER) {
+                CallbackBridge.sendKeyPress(LwjglGlfwKeycode.GLFW_KEY_ENTER.toInt()); true
+            } else false
+        }
+        // A zero-width sentinel char is always present so a Backspace is visible as "the sentinel disappeared".
+        addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, st: Int, c: Int, a: Int) {}
+            override fun onTextChanged(s: CharSequence?, st: Int, b: Int, c: Int) {}
+            override fun afterTextChanged(s: Editable) {
+                if (kbResetting) return
+                val t = s.toString()
+                if (t.isEmpty()) {
+                    CallbackBridge.sendKeyPress(LwjglGlfwKeycode.GLFW_KEY_BACKSPACE.toInt())
+                } else {
+                    t.replace(SENTINEL, "").forEach { ch -> CallbackBridge.sendChar(ch, 0) }
+                }
+                kbResetting = true
+                s.replace(0, s.length, SENTINEL)
+                kbResetting = false
+            }
+        })
+    }
+
+    private fun toggleKeyboard() {
+        val imm = getSystemService(InputMethodManager::class.java)
+        kbOn = !kbOn
+        if (kbOn) {
+            kbInput.requestFocus()
+            imm.showSoftInput(kbInput, InputMethodManager.SHOW_FORCED)
+        } else {
+            imm.hideSoftInputFromWindow(kbInput.windowToken, 0)
+        }
+    }
+
+    // ---- surface / JVM ----
 
     override fun surfaceCreated(holder: SurfaceHolder) {}
 
@@ -105,40 +191,12 @@ class GameActivity : Activity(), SurfaceHolder.Callback {
 
     override fun surfaceDestroyed(holder: SurfaceHolder) { runCatching { JREUtils.releaseBridgeWindow() } }
 
-    override fun onTouchEvent(e: MotionEvent): Boolean {
-        val left = LwjglGlfwKeycode.GLFW_MOUSE_BUTTON_LEFT.toInt()
-        val right = LwjglGlfwKeycode.GLFW_MOUSE_BUTTON_RIGHT.toInt()
-        when (e.actionMasked) {
-            MotionEvent.ACTION_DOWN -> {
-                lastX = e.x; lastY = e.y; downAt = e.eventTime; moved = false
-                if (!CallbackBridge.isGrabbing()) CallbackBridge.sendCursorPos(e.x, e.y)
-                ui.postDelayed(longPress, 400)
-            }
-            MotionEvent.ACTION_MOVE -> {
-                val dx = e.x - lastX; val dy = e.y - lastY
-                if (kotlin.math.abs(dx) + kotlin.math.abs(dy) > 6f) { moved = true; ui.removeCallbacks(longPress) }
-                if (CallbackBridge.isGrabbing()) CallbackBridge.sendCursorPos(CallbackBridge.mouseX + dx, CallbackBridge.mouseY + dy)
-                else CallbackBridge.sendCursorPos(e.x, e.y)
-                lastX = e.x; lastY = e.y
-            }
-            MotionEvent.ACTION_UP -> {
-                ui.removeCallbacks(longPress)
-                if (holding) { holding = false; CallbackBridge.sendMouseButton(left, false) }
-                else if (!moved && e.eventTime - downAt < 300) {
-                    CallbackBridge.sendMouseButton(left, true); CallbackBridge.sendMouseButton(left, false)
-                }
-            }
-            MotionEvent.ACTION_POINTER_DOWN -> { // second finger tap = right click
-                CallbackBridge.sendMouseButton(right, true); CallbackBridge.sendMouseButton(right, false)
-            }
-        }
-        return true
-    }
-
     @Deprecated("Back = Escape in game")
     override fun onBackPressed() {
         if (exited) { closeGame(); return }
         CallbackBridge.sendKeyPress(LwjglGlfwKeycode.GLFW_KEY_ESCAPE.toInt(), 0, true)
         CallbackBridge.sendKeyPress(LwjglGlfwKeycode.GLFW_KEY_ESCAPE.toInt(), 0, false)
     }
+
+    private companion object { const val SENTINEL = "​" }
 }
