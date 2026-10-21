@@ -3,46 +3,53 @@ package com.sally.editor
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
+import android.graphics.Typeface
 import android.view.Gravity
 import android.view.View
-import android.view.inputmethod.InputMethodManager
-import android.content.Context
-import android.graphics.Typeface
-import android.text.Editable
-import android.text.TextWatcher
-import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.content.getSystemService
 import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.button.MaterialButton
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.color.DynamicColors
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import io.github.rosemoe.sora.event.ContentChangeEvent
+import io.github.rosemoe.sora.langs.textmate.TextMateColorScheme
+import io.github.rosemoe.sora.langs.textmate.registry.FileProviderRegistry
+import io.github.rosemoe.sora.langs.textmate.registry.GrammarRegistry
+import io.github.rosemoe.sora.langs.textmate.registry.ThemeRegistry
+import io.github.rosemoe.sora.langs.textmate.registry.model.ThemeModel
+import io.github.rosemoe.sora.langs.textmate.registry.provider.AssetsFileResolver
+import org.eclipse.tm4e.core.registry.IThemeSource
+import io.github.rosemoe.sora.widget.CodeEditor
 import java.io.BufferedReader
 import java.io.InputStreamReader
 
-private data class EditorSnapshot(val text: String, val cursor: Int)
+data class CodeSnippet(
+    val prefix: String,
+    val description: String,
+    val body: String
+)
 
 class MainActivity : AppCompatActivity() {
-    private lateinit var editor: EditText
-    private lateinit var lineNumbers: LineNumberView
-    private lateinit var status: TextView
+    private lateinit var editor: CodeEditor
     private lateinit var filename: TextView
+    private lateinit var status: TextView
     private var currentUri: Uri? = null
     private var currentName = "Untitled.txt"
     private var dirty = false
-    private var suppressDirty = false
-    private var applyingHistory = false
-    private val undoStack = ArrayDeque<EditorSnapshot>()
-    private val redoStack = ArrayDeque<EditorSnapshot>()
+    private var loadingDocument = false
+    private var textMateReady = false
 
     private val openDocument = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) {
             try {
-                contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                contentResolver.takePersistableUriPermission(
+                    uri,
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+                )
             } catch (_: Exception) { }
             readDocument(uri)
         }
@@ -58,153 +65,114 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         DynamicColors.applyToActivitiesIfAvailable(application)
         super.onCreate(savedInstanceState)
+        initializeTextMate()
         setContentView(createContent())
+        setEditorLanguage()
         updateStatus()
+    }
+
+    private fun initializeTextMate() {
+        try {
+            FileProviderRegistry.getInstance().addFileProvider(AssetsFileResolver(applicationContext.assets))
+            val themeName = "sally-dark"
+            val themePath = "textmate/$themeName.json"
+            val stream = assets.open(themePath)
+            val source = IThemeSource.fromInputStream(stream, themePath, null)
+            ThemeRegistry.getInstance().loadTheme(ThemeModel(source, themeName))
+            ThemeRegistry.getInstance().setTheme(themeName)
+            GrammarRegistry.getInstance().loadGrammars("textmate/languages.json")
+            textMateReady = true
+        } catch (error: Exception) {
+            // Keep the editor usable as plain text if a third-party grammar/theme fails to load.
+            android.util.Log.e("SallyTextEditor", "TextMate initialization failed", error)
+            toast("Syntax pack unavailable; opening plain text mode")
+        }
     }
 
     private fun createContent(): View {
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setBackgroundColor(android.graphics.Color.parseColor("#F7F2FA"))
+            setBackgroundColor(android.graphics.Color.parseColor("#111318"))
         }
 
         val toolbar = MaterialToolbar(this).apply {
             title = "Sally Text Editor"
-            subtitle = "A clean workspace"
+            subtitle = "Code workspace"
             setNavigationIcon(android.R.drawable.ic_menu_sort_by_size)
             setNavigationOnClickListener { showFileMenu() }
+            setTitleTextColor(android.graphics.Color.WHITE)
         }
-        root.addView(toolbar, LinearLayout.LayoutParams(-1, dp(64)))
+        root.addView(toolbar, LinearLayout.LayoutParams(-1, dp(60)))
 
         val fileHeader = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
-            setPadding(dp(16), dp(8), dp(16), dp(8))
+            setPadding(dp(10), dp(4), dp(10), dp(4))
         }
         filename = TextView(this).apply {
             text = currentName
-            textSize = 14f
+            textSize = 13f
             typeface = Typeface.DEFAULT_BOLD
-            setTextColor(android.graphics.Color.parseColor("#6750A4"))
+            setTextColor(android.graphics.Color.parseColor("#D0BCFF"))
+            maxLines = 1
+            ellipsize = android.text.TextUtils.TruncateAt.MIDDLE
         }
         fileHeader.addView(filename, LinearLayout.LayoutParams(0, -2, 1f))
-        val saveButton = MaterialButton(this, null, com.google.android.material.R.attr.materialButtonOutlinedStyle).apply {
-            text = "Save"
-            isAllCaps = false
-            setOnClickListener { saveFile() }
-        }
-        fileHeader.addView(saveButton)
-        val undoButton = MaterialButton(this, null, com.google.android.material.R.attr.materialButtonOutlinedStyle).apply {
-            text = "Undo"
-            isAllCaps = false
-            setOnClickListener { undo() }
-        }
-        fileHeader.addView(undoButton)
-        val redoButton = MaterialButton(this, null, com.google.android.material.R.attr.materialButtonOutlinedStyle).apply {
-            text = "Redo"
-            isAllCaps = false
-            setOnClickListener { redo() }
-        }
-        fileHeader.addView(redoButton)
+        fileHeader.addView(button("Save") { saveFile() })
+        fileHeader.addView(button("Snippets") { showSnippets() })
         root.addView(fileHeader)
 
-        val editorArea = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            setBackgroundColor(android.graphics.Color.parseColor("#FFFBFE"))
-        }
-        lineNumbers = LineNumberView(this).apply {
-            setPadding(dp(4), dp(12), dp(4), dp(24))
-            lineCount = 1
-        }
-        editor = EditText(this).apply {
-            setText("Welcome to Sally Text Editor!\n\nThis is your own native editing workspace.\n\n• Create a document with New\n• Open a text or source file\n• Edit and save your changes\n\nNext milestones: tabs, syntax highlighting, and autocomplete.")
-            textSize = 15f
-            typeface = Typeface.MONOSPACE
-            gravity = Gravity.TOP or Gravity.START
-            setPadding(dp(16), dp(12), dp(16), dp(24))
-            setTextIsSelectable(true)
-            setHorizontallyScrolling(false)
-            setBackgroundColor(android.graphics.Color.parseColor("#FFFBFE"))
-            setHint("Start typing…")
-            addTextChangedListener(object : TextWatcher {
-                override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {
-                    if (!applyingHistory && !suppressDirty && s != null) {
-                        undoStack.addLast(EditorSnapshot(s.toString(), selectionStart.coerceAtLeast(0)))
-                        while (undoStack.size > 100) undoStack.removeFirst()
-                        redoStack.clear()
-                    }
-                }
-                override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
-                    if (!suppressDirty) dirty = true
-                    updateStatus()
-                    lineNumbers.lineCount = (s?.count { it == '\n' } ?: 0) + 1
-                }
-                override fun afterTextChanged(s: Editable?) {
-                    if (s != null) {
-                        if (!applyingHistory && !suppressDirty && selectionStart > 0 && selectionStart == selectionEnd) {
-                            val cursor = selectionStart
-                            val closer = when (s[cursor - 1]) {
-                                '(' -> ')'; '[' -> ']'; '{' -> '}'; '"' -> '"'; '\'' -> '\''; else -> null
-                            }
-                            if (closer != null && (cursor >= s.length || s[cursor] != closer)) {
-                                s.insert(cursor, closer.toString())
-                                setSelection(cursor)
-                            }
-                        }
-                        SyntaxHighlighter.apply(s, currentName)
-                    }
-                }
-            })
-            setOnKeyListener { _, keyCode, event ->
-                if (event.action != android.view.KeyEvent.ACTION_DOWN) return@setOnKeyListener false
-                if (keyCode == android.view.KeyEvent.KEYCODE_TAB) {
-                    val start = selectionStart.coerceAtLeast(0)
-                    val end = selectionEnd.coerceAtLeast(start)
-                    text?.replace(start, end, "    ")
-                    setSelection(start + 4)
-                    return@setOnKeyListener true
-                }
-                if (keyCode == android.view.KeyEvent.KEYCODE_ENTER) {
-                    val cursor = selectionStart.coerceAtLeast(0)
-                    val content = text?.toString().orEmpty()
-                    val lineStart = content.lastIndexOf('\n', (cursor - 1).coerceAtLeast(0)) + 1
-                    val indent = content.substring(lineStart, cursor).takeWhile { it == ' ' || it == '\t' }
-                    post {
-                        val pos = selectionStart.coerceAtLeast(0)
-                        text?.insert(pos, indent)
-                        setSelection(pos + indent.length)
-                    }
-                }
-                false
+        editor = CodeEditor(this).apply {
+            setTypefaceText(Typeface.MONOSPACE)
+            setTypefaceLineNumber(Typeface.MONOSPACE)
+            setTextSize(15f)
+            setWordwrap(true)
+            setText("// Welcome to Sally Text Editor\n// Syntax highlighting, autocomplete and snippets are powered by Sora Editor + TextMate.\n\n")
+            if (textMateReady) {
+                setColorScheme(TextMateColorScheme.create(ThemeRegistry.getInstance()))
+            }
+            setBackgroundColor(android.graphics.Color.parseColor("#111318"))
+            subscribeEvent(ContentChangeEvent::class.java) { _, _ ->
+                if (!loadingDocument) dirty = true
+                updateStatus()
             }
         }
-        editorArea.addView(lineNumbers, LinearLayout.LayoutParams(dp(42), -1))
-        editorArea.addView(editor, LinearLayout.LayoutParams(0, -1, 1f))
-        editor.setOnScrollChangeListener { _, _, scrollY, _, _ -> lineNumbers.verticalScrollPx = scrollY }
-        editor.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ -> lineNumbers.lineHeightPx = editor.lineHeight.toFloat() }
-        root.addView(editorArea, LinearLayout.LayoutParams(-1, 0, 1f))
+        root.addView(editor, LinearLayout.LayoutParams(-1, 0, 1f))
 
         val bottom = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
-            setPadding(dp(16), dp(8), dp(16), dp(8))
+            setPadding(dp(12), dp(6), dp(12), dp(6))
         }
-        status = TextView(this).apply { textSize = 12f }
+        status = TextView(this).apply {
+            textSize = 11f
+            setTextColor(android.graphics.Color.parseColor("#CAC4D0"))
+            maxLines = 1
+        }
         bottom.addView(status, LinearLayout.LayoutParams(0, -2, 1f))
-        val openButton = MaterialButton(this, null, com.google.android.material.R.attr.materialButtonOutlinedStyle).apply {
-            text = "Open"
-            isAllCaps = false
-            setOnClickListener { openDocument.launch(arrayOf("*/*")) }
-        }
-        bottom.addView(openButton)
-        val newButton = MaterialButton(this).apply {
-            text = "New"
-            isAllCaps = false
-            setOnClickListener { newFile() }
-        }
-        bottom.addView(newButton)
+        bottom.addView(button("Open") { openDocument.launch(arrayOf("*/*")) })
+        bottom.addView(button("New") { newFile() })
         root.addView(bottom)
         return root
+    }
+
+    private fun button(label: String, action: () -> Unit) = MaterialButton(
+        this, null, com.google.android.material.R.attr.materialButtonOutlinedStyle
+    ).apply {
+        text = label
+        textSize = 12f
+        isAllCaps = false
+        setOnClickListener { action() }
+    }
+
+    private fun setEditorLanguage() {
+        if (!textMateReady) return
+        try {
+            editor.setColorScheme(TextMateColorScheme.create(ThemeRegistry.getInstance()))
+            editor.setEditorLanguage(SallyTextMateLanguage(snippetsFor(currentName)))
+        } catch (error: Exception) {
+            android.util.Log.e("SallyTextEditor", "Could not attach TextMate language", error)
+        }
     }
 
     private fun showFileMenu() {
@@ -235,13 +203,12 @@ class MainActivity : AppCompatActivity() {
     private fun resetDocument() {
         currentUri = null
         currentName = "Untitled.txt"
-        suppressDirty = true
+        loadingDocument = true
         editor.setText("")
-        suppressDirty = false
+        loadingDocument = false
         dirty = false
-        undoStack.clear()
-        redoStack.clear()
         filename.text = currentName
+        setEditorLanguage()
         updateStatus()
     }
 
@@ -252,29 +219,23 @@ class MainActivity : AppCompatActivity() {
             } ?: ""
             currentUri = uri
             currentName = uri.lastPathSegment?.substringAfterLast('/')?.takeIf { it.isNotBlank() } ?: "Opened file"
-            suppressDirty = true
+            loadingDocument = true
             editor.setText(content)
-            suppressDirty = false
-            editor.setSelection(editor.text.length)
+            loadingDocument = false
             dirty = false
-            undoStack.clear()
-            redoStack.clear()
             filename.text = currentName
-            SyntaxHighlighter.apply(editor.text, currentName)
+            setEditorLanguage()
             updateStatus()
             toast("Opened $currentName")
-        } catch (e: Exception) {
-            toast("Couldn't open file: ${e.localizedMessage ?: "unknown error"}")
+        } catch (error: Exception) {
+            loadingDocument = false
+            toast("Couldn't open file: ${error.localizedMessage ?: "unknown error"}")
         }
     }
 
     private fun saveFile() {
         val uri = currentUri
-        if (uri == null) {
-            createDocument.launch(currentName)
-        } else {
-            writeDocument(uri)
-        }
+        if (uri == null) createDocument.launch(currentName) else writeDocument(uri)
     }
 
     private fun writeDocument(uri: Uri) {
@@ -284,52 +245,100 @@ class MainActivity : AppCompatActivity() {
             } ?: throw IllegalStateException("Unable to open output stream")
             currentUri = uri
             currentName = uri.lastPathSegment?.substringAfterLast('/')?.takeIf { it.isNotBlank() } ?: currentName
-            filename.text = currentName
-            SyntaxHighlighter.apply(editor.text, currentName)
             dirty = false
+            filename.text = currentName
+            setEditorLanguage()
             updateStatus()
             toast("Saved successfully")
-        } catch (e: Exception) {
-            toast("Couldn't save file: ${e.localizedMessage ?: "unknown error"}")
+        } catch (error: Exception) {
+            toast("Couldn't save file: ${error.localizedMessage ?: "unknown error"}")
         }
     }
 
-    private fun undo() {
-        if (undoStack.isEmpty()) { toast("Nothing to undo"); return }
-        redoStack.addLast(EditorSnapshot(editor.text.toString(), editor.selectionStart.coerceAtLeast(0)))
-        restoreSnapshot(undoStack.removeLast())
-    }
-
-    private fun redo() {
-        if (redoStack.isEmpty()) { toast("Nothing to redo"); return }
-        undoStack.addLast(EditorSnapshot(editor.text.toString(), editor.selectionStart.coerceAtLeast(0)))
-        restoreSnapshot(redoStack.removeLast())
-    }
-
-    private fun restoreSnapshot(snapshot: EditorSnapshot) {
-        applyingHistory = true
-        suppressDirty = true
-        editor.setText(snapshot.text)
-        editor.setSelection(snapshot.cursor.coerceIn(0, editor.text.length))
-        suppressDirty = false
-        applyingHistory = false
-        dirty = true
-        SyntaxHighlighter.apply(editor.text, currentName)
-        updateStatus()
+    private fun showSnippets() {
+        val items = snippetsFor(currentName)
+        MaterialAlertDialogBuilder(this)
+            .setTitle("Insert snippet")
+            .setItems(items.map { "${it.prefix} — ${it.description}" }.toTypedArray()) { _, index ->
+                try {
+                    editor.insertText(items[index].body, items[index].body.length)
+                    editor.requestFocus()
+                } catch (error: Exception) {
+                    toast("Couldn't insert snippet: ${error.localizedMessage ?: "unknown error"}")
+                }
+            }
+            .setNegativeButton("Close", null)
+            .show()
     }
 
     private fun updateStatus() {
         if (!::status.isInitialized || !::editor.isInitialized) return
-        val text = editor.text
-        if (::lineNumbers.isInitialized) lineNumbers.lineCount = text.count { it == '\n' } + 1
-        val cursor = editor.selectionStart.coerceAtLeast(0)
-        val line = text.subSequence(0, cursor.coerceAtMost(text.length)).count { it == '\n' } + 1
-        val lastNewline = text.toString().lastIndexOf('\n', (cursor - 1).coerceAtLeast(0))
-        val column = cursor - lastNewline
-        status.text = "Ln $line, Col $column  •  ${text.length} chars${if (dirty) "  •  Modified" else ""}"
+        val content = editor.text.toString()
+        val lines = if (content.isEmpty()) 1 else content.count { it == '\n' } + 1
+        status.text = "$lines lines • ${content.length} chars${if (dirty) " • Modified" else ""}"
         filename.text = currentName
+    }
+
+    override fun onDestroy() {
+        if (::editor.isInitialized) editor.release()
+        super.onDestroy()
     }
 
     private fun toast(message: String) = Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
     private fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
+
+    private fun snippetsFor(fileName: String): List<CodeSnippet> {
+        val ext = fileName.substringAfterLast('.', "").lowercase()
+        val common = listOf(
+            CodeSnippet("if", "If statement", "if (condition) {\n    \n}"),
+            CodeSnippet("for", "For loop", "for (int i = 0; i < count; i++) {\n    \n}"),
+            CodeSnippet("class", "Class declaration", "class ClassName {\n    \n}"),
+            CodeSnippet("trycatch", "Try/catch block", "try {\n    \n} catch (e) {\n    \n}"),
+            CodeSnippet("function", "Function declaration", "function functionName() {\n    \n}"),
+            CodeSnippet("log", "Print/log value", "console.log(\"\", value);"),
+            CodeSnippet("comment", "Comment block", "/*\n * TODO: describe this section\n */")
+        )
+        val languageSpecific = when (ext) {
+            "html", "htm", "xhtml" -> listOf(
+                CodeSnippet("html", "HTML document", "<!doctype html>\n<html lang=\"en\">\n<head>\n    <meta charset=\"utf-8\">\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n    <title>Document</title>\n</head>\n<body>\n    \n</body>\n</html>"),
+                CodeSnippet("div", "HTML div", "<div class=\"container\">\n    \n</div>"),
+                CodeSnippet("script", "Script tag", "<script>\n    \n</script>"),
+                CodeSnippet("style", "Style tag", "<style>\n    \n</style>")
+            )
+            "css", "scss", "less" -> listOf(
+                CodeSnippet("flex", "Flex layout", ".container {\n    display: flex;\n    align-items: center;\n    justify-content: center;\n}"),
+                CodeSnippet("media", "Responsive media query", "@media (max-width: 768px) {\n    \n}"),
+                CodeSnippet("root", "CSS variables", ":root {\n    --primary: #6750a4;\n}")
+            )
+            "py", "pyw" -> listOf(
+                CodeSnippet("def", "Python function", "def function_name():\n    pass"),
+                CodeSnippet("ifmain", "Python entry point", "if __name__ == \"__main__\":\n    main()"),
+                CodeSnippet("class", "Python class", "class ClassName:\n    def __init__(self):\n        pass")
+            )
+            "js", "mjs", "cjs", "jsx", "ts", "tsx" -> listOf(
+                CodeSnippet("arrow", "Arrow function", "const functionName = (value) => {\n    return value;\n};"),
+                CodeSnippet("promise", "Promise chain", "Promise.resolve(value)\n    .then((result) => {\n        return result;\n    })\n    .catch((error) => {\n        console.error(error);\n    });"),
+                CodeSnippet("async", "Async function", "async function functionName() {\n    const result = await loadData();\n    return result;\n}")
+            )
+            "java", "kt", "kts" -> listOf(
+                CodeSnippet("main", "Main function", if (ext == "kt" || ext == "kts") "fun main() {\n    \n}" else "public static void main(String[] args) {\n    \n}"),
+                CodeSnippet("println", "Print line", if (ext == "kt" || ext == "kts") "println(\"Hello\")" else "System.out.println(\"Hello\");"),
+                CodeSnippet("fun", "Kotlin function", "fun functionName() {\n    \n}")
+            )
+            "c", "h", "cc", "cpp", "cxx", "hpp" -> listOf(
+                CodeSnippet("include", "stdio include", "#include <stdio.h>"),
+                CodeSnippet("main", "C/C++ main", "int main(void) {\n    return 0;\n}"),
+                CodeSnippet("printf", "Print value", "printf(\"%d\\n\", value);")
+            )
+            "sh", "bash", "zsh" -> listOf(
+                CodeSnippet("shebang", "Shell script header", "#!/usr/bin/env bash\nset -euo pipefail"),
+                CodeSnippet("for", "Shell loop", "for item in \"${'$'}@\"; do\n    echo \"${'$'}item\"\ndone")
+            )
+            "json" -> listOf(CodeSnippet("object", "JSON object", "{\n    \"name\": \"value\",\n    \"enabled\": true\n}"))
+            "sql" -> listOf(CodeSnippet("select", "SQL select", "SELECT column_name\nFROM table_name\nWHERE condition\nORDER BY column_name;"))
+            "xml", "svg" -> listOf(CodeSnippet("element", "XML element", "<element attribute=\"value\">\n    \n</element>"))
+            else -> emptyList()
+        }
+        return languageSpecific + common
+    }
 }

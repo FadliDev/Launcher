@@ -1,0 +1,10 @@
+{
+  "languages": [
+    {
+      "grammar": "textmate/sally.tmLanguage.json",
+      "name": "sally",
+      "scopeName": "source.sally",
+      "languageConfiguration": "textmate/language-configuration.json"
+    }
+  ]
+}

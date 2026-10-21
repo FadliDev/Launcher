@@ -1,0 +1,28 @@
+{
+  "$schema": "vscode://schemas/color-theme",
+  "name": "Sally Dark",
+  "type": "dark",
+  "colors": {
+    "editor.background": "#111318",
+    "editor.foreground": "#E6E1E5",
+    "editorCursor.foreground": "#D0BCFF",
+    "editorLineNumber.foreground": "#77727E",
+    "editorLineNumber.activeForeground": "#D0BCFF",
+    "editor.selectionBackground": "#49415F",
+    "editor.lineHighlightBackground": "#1C1B22",
+    "editorWhitespace.foreground": "#393641",
+    "editorIndentGuide.background": "#302D39"
+  },
+  "tokenColors": [
+    {"scope": ["comment", "punctuation.definition.comment"], "settings": {"foreground": "#8A8F98", "fontStyle": "italic"}},
+    {"scope": ["string", "string.quoted", "markup.raw"], "settings": {"foreground": "#A8D7A0"}},
+    {"scope": ["constant.numeric", "constant.language", "constant.character.entity"], "settings": {"foreground": "#E7B879"}},
+    {"scope": ["keyword", "keyword.control", "storage.type", "storage.modifier"], "settings": {"foreground": "#D0BCFF"}},
+    {"scope": ["keyword.operator", "punctuation.separator", "punctuation.definition"], "settings": {"foreground": "#B8B4C5"}},
+    {"scope": ["entity.name.function", "support.function"], "settings": {"foreground": "#8CC8F0"}},
+    {"scope": ["entity.name.type", "support.type", "entity.name.class"], "settings": {"foreground": "#F2C58B"}},
+    {"scope": ["entity.name.tag", "punctuation.definition.tag"], "settings": {"foreground": "#80CBC4"}},
+    {"scope": ["entity.other.attribute-name", "variable.other.property"], "settings": {"foreground": "#F0A8B5"}},
+    {"scope": ["constant.other", "variable.language"], "settings": {"foreground": "#F2C58B"}}
+  ]
+}
