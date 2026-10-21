@@ -7,6 +7,7 @@ import com.sally.ember.data.Account
 import com.sally.ember.data.Paths
 import com.sally.ember.data.Prefs
 import net.kdt.pojavlaunch.Logger
+import org.lwjgl.glfw.CallbackBridge
 import net.kdt.pojavlaunch.utils.JREUtils
 import org.json.JSONObject
 import java.io.File
@@ -85,7 +86,7 @@ object GameLauncher {
         // Same as PojavLauncher: 1.13+ versions (new "arguments" json) need input delivered on the render thread via the
         // stack queue (pumped from glfwPollEvents). Direct callbacks from the Android UI thread are ignored/unsafe there.
         val stackQueue = vjson.has("arguments")
-        org.lwjgl.glfw.CallbackBridge.nativeSetUseInputStackQueue(stackQueue)
+        CallbackBridge.nativeSetUseInputStackQueue(stackQueue)
         say("Input stack queue: $stackQueue")
 
         JREUtils.setupExitMethod(ctx.applicationContext)
