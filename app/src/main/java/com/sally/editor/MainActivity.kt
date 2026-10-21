@@ -42,6 +42,7 @@ class MainActivity : AppCompatActivity() {
     private var dirty = false
     private var loadingDocument = false
     private var textMateReady = false
+    private lateinit var snippetRepository: FriendlySnippetRepository
 
     private val openDocument = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) {
@@ -66,6 +67,7 @@ class MainActivity : AppCompatActivity() {
         DynamicColors.applyToActivitiesIfAvailable(application)
         super.onCreate(savedInstanceState)
         initializeTextMate()
+        snippetRepository = FriendlySnippetRepository(this)
         setContentView(createContent())
         setEditorLanguage()
         updateStatus()
@@ -257,8 +259,12 @@ class MainActivity : AppCompatActivity() {
 
     private fun showSnippets() {
         val items = snippetsFor(currentName)
+        if (items.isEmpty()) {
+            toast("Belum ada snippet pack untuk ekstensi file ini")
+            return
+        }
         MaterialAlertDialogBuilder(this)
-            .setTitle("Insert snippet")
+            .setTitle("Insert snippet · Friendly Snippets")
             .setItems(items.map { "${it.prefix} — ${it.description}" }.toTypedArray()) { _, index ->
                 try {
                     editor.insertText(items[index].body, items[index].body.length)
@@ -287,58 +293,5 @@ class MainActivity : AppCompatActivity() {
     private fun toast(message: String) = Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
     private fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
 
-    private fun snippetsFor(fileName: String): List<CodeSnippet> {
-        val ext = fileName.substringAfterLast('.', "").lowercase()
-        val common = listOf(
-            CodeSnippet("if", "If statement", "if (condition) {\n    \n}"),
-            CodeSnippet("for", "For loop", "for (int i = 0; i < count; i++) {\n    \n}"),
-            CodeSnippet("class", "Class declaration", "class ClassName {\n    \n}"),
-            CodeSnippet("trycatch", "Try/catch block", "try {\n    \n} catch (e) {\n    \n}"),
-            CodeSnippet("function", "Function declaration", "function functionName() {\n    \n}"),
-            CodeSnippet("log", "Print/log value", "console.log(\"\", value);"),
-            CodeSnippet("comment", "Comment block", "/*\n * TODO: describe this section\n */")
-        )
-        val languageSpecific = when (ext) {
-            "html", "htm", "xhtml" -> listOf(
-                CodeSnippet("html", "HTML document", "<!doctype html>\n<html lang=\"en\">\n<head>\n    <meta charset=\"utf-8\">\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n    <title>Document</title>\n</head>\n<body>\n    \n</body>\n</html>"),
-                CodeSnippet("div", "HTML div", "<div class=\"container\">\n    \n</div>"),
-                CodeSnippet("script", "Script tag", "<script>\n    \n</script>"),
-                CodeSnippet("style", "Style tag", "<style>\n    \n</style>")
-            )
-            "css", "scss", "less" -> listOf(
-                CodeSnippet("flex", "Flex layout", ".container {\n    display: flex;\n    align-items: center;\n    justify-content: center;\n}"),
-                CodeSnippet("media", "Responsive media query", "@media (max-width: 768px) {\n    \n}"),
-                CodeSnippet("root", "CSS variables", ":root {\n    --primary: #6750a4;\n}")
-            )
-            "py", "pyw" -> listOf(
-                CodeSnippet("def", "Python function", "def function_name():\n    pass"),
-                CodeSnippet("ifmain", "Python entry point", "if __name__ == \"__main__\":\n    main()"),
-                CodeSnippet("class", "Python class", "class ClassName:\n    def __init__(self):\n        pass")
-            )
-            "js", "mjs", "cjs", "jsx", "ts", "tsx" -> listOf(
-                CodeSnippet("arrow", "Arrow function", "const functionName = (value) => {\n    return value;\n};"),
-                CodeSnippet("promise", "Promise chain", "Promise.resolve(value)\n    .then((result) => {\n        return result;\n    })\n    .catch((error) => {\n        console.error(error);\n    });"),
-                CodeSnippet("async", "Async function", "async function functionName() {\n    const result = await loadData();\n    return result;\n}")
-            )
-            "java", "kt", "kts" -> listOf(
-                CodeSnippet("main", "Main function", if (ext == "kt" || ext == "kts") "fun main() {\n    \n}" else "public static void main(String[] args) {\n    \n}"),
-                CodeSnippet("println", "Print line", if (ext == "kt" || ext == "kts") "println(\"Hello\")" else "System.out.println(\"Hello\");"),
-                CodeSnippet("fun", "Kotlin function", "fun functionName() {\n    \n}")
-            )
-            "c", "h", "cc", "cpp", "cxx", "hpp" -> listOf(
-                CodeSnippet("include", "stdio include", "#include <stdio.h>"),
-                CodeSnippet("main", "C/C++ main", "int main(void) {\n    return 0;\n}"),
-                CodeSnippet("printf", "Print value", "printf(\"%d\\n\", value);")
-            )
-            "sh", "bash", "zsh" -> listOf(
-                CodeSnippet("shebang", "Shell script header", "#!/usr/bin/env bash\nset -euo pipefail"),
-                CodeSnippet("for", "Shell loop", "for item in \"${'$'}@\"; do\n    echo \"${'$'}item\"\ndone")
-            )
-            "json" -> listOf(CodeSnippet("object", "JSON object", "{\n    \"name\": \"value\",\n    \"enabled\": true\n}"))
-            "sql" -> listOf(CodeSnippet("select", "SQL select", "SELECT column_name\nFROM table_name\nWHERE condition\nORDER BY column_name;"))
-            "xml", "svg" -> listOf(CodeSnippet("element", "XML element", "<element attribute=\"value\">\n    \n</element>"))
-            else -> emptyList()
-        }
-        return languageSpecific + common
-    }
+    private fun snippetsFor(fileName: String): List<CodeSnippet> = snippetRepository.forFile(fileName)
 }
