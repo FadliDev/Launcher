@@ -740,14 +740,14 @@ private fun EditorScreen(
                         setEditorLanguage(TextMateSupport.languageFor(activeDoc.name))
                         setText(activeDoc.content)
                         editorHolder(this)
-                        subscribeAlways<ContentChangeEvent> {
+                        subscribeAlways<ContentChangeEvent> { _ ->
                             val current = text.toString()
                             val row = cursor.leftLine
                             val col = cursor.leftColumn
                             val word = wordAtCursor(current, row, col)
                             onContent(activeDoc.id, current, word, row, col)
                         }
-                        subscribeAlways<SelectionChangeEvent> {
+                        subscribeAlways<SelectionChangeEvent> { _ ->
                             val current = text.toString()
                             val row = cursor.leftLine
                             val col = cursor.leftColumn
