@@ -169,9 +169,25 @@ class MainActivity : AppCompatActivity() {
 
     private fun setEditorLanguage() {
         if (!textMateReady) return
+        val requestedName = currentName
+        applyEditorLanguage(snippetsFor(requestedName))
+        // If this extension has no bundled/cached pack, fetch it automatically in the background.
+        // The current file stays editable while the download runs.
+        snippetRepository.ensureForFile(requestedName) { snippets ->
+            runOnUiThread {
+                if (!isFinishing && !isDestroyed && currentName == requestedName && snippets.isNotEmpty()) {
+                    applyEditorLanguage(snippets)
+                    toast("Snippet pack ready for $requestedName")
+                }
+            }
+        }
+    }
+
+    private fun applyEditorLanguage(snippets: List<CodeSnippet>) {
+        if (!textMateReady || !::editor.isInitialized) return
         try {
             editor.setColorScheme(TextMateColorScheme.create(ThemeRegistry.getInstance()))
-            editor.setEditorLanguage(SallyTextMateLanguage(snippetsFor(currentName)))
+            editor.setEditorLanguage(SallyTextMateLanguage(snippets))
         } catch (error: Exception) {
             android.util.Log.e("SallyTextEditor", "Could not attach TextMate language", error)
         }
@@ -258,11 +274,27 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showSnippets() {
-        val items = snippetsFor(currentName)
-        if (items.isEmpty()) {
-            toast("Belum ada snippet pack untuk ekstensi file ini")
+        val fileForRequest = currentName
+        val items = snippetsFor(fileForRequest)
+        if (items.isNotEmpty()) {
+            displaySnippets(items)
             return
         }
+        toast("Mencari snippet untuk $fileForRequest…")
+        snippetRepository.ensureForFile(fileForRequest) { downloaded ->
+            runOnUiThread {
+                if (isFinishing || isDestroyed || currentName != fileForRequest) return@runOnUiThread
+                if (downloaded.isEmpty()) {
+                    toast("Snippet untuk bahasa ini tidak ditemukan atau internet tidak tersedia")
+                } else {
+                    applyEditorLanguage(downloaded)
+                    displaySnippets(downloaded)
+                }
+            }
+        }
+    }
+
+    private fun displaySnippets(items: List<CodeSnippet>) {
         MaterialAlertDialogBuilder(this)
             .setTitle("Insert snippet · Friendly Snippets")
             .setItems(items.map { "${it.prefix} — ${it.description}" }.toTypedArray()) { _, index ->
