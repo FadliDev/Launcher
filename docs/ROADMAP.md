@@ -36,8 +36,8 @@ Tujuan: pastikan ide ini feasible sebelum bangun UI besar.
 - [ ] Tab multi-file, undo/redo, find & replace
 - [ ] Auto indent, auto close bracket, bracket match, folding
 - [ ] Extra key row
-- [ ] Snippet engine + snippet bawaan
-- [ ] Auto complete dasar (keyword + snippet + kata di file)
+- [x] Snippet engine + snippet bawaan (tabstop, placeholder, TAB untuk lompat)
+- [x] Auto complete dasar (keyword + snippet + kata di file) — chip di atas extra key row; popup bawaan Sora dimatikan
 - [ ] Tema editor: light/dark + dynamic color MD3
 
 **Rilis:** `v0.1` — editor teks yang enak dipakai.
@@ -58,14 +58,14 @@ Tujuan: pastikan ide ini feasible sebelum bangun UI besar.
 **Rilis:** `v0.2` (versi 0.2.0 di `app/build.gradle.kts`).
 
 ## Fase 3 — SDK & toolchain manager (2–3 minggu)
-- [ ] Layar "Toolchain": JDK, Gradle, SDK, build-tools, NDK
-- [ ] Downloader (resume, checksum, progress, hapus)
-- [ ] Unduh `android.jar` per API dari `sable/android-platforms`
-- [ ] Generate struktur SDK agar dikenali AGP
-- [ ] Setting per proyek `.sallyide/project.json`
-- [ ] Info ukuran storage + bersihkan cache
+- [x] Layar "Toolchain": Gradle, SDK platform; JDK/build-tools/NDK lewat paket kustom `.zip` (URL sendiri)
+- [x] Downloader (resume, checksum, progress, hapus)
+- [x] Unduh `android.jar` per API dari `sable/android-platforms`
+- [ ] Generate struktur SDK agar dikenali AGP (baru `platforms/android-N/android.jar` + `source.properties`; `package.xml`, `build.prop`, `data/` menyusul)
+- [x] Setting per proyek `.sallyide/project.json`
+- [x] Info ukuran storage + bersihkan cache
 
-**Rilis:** `v0.3`.
+**Rilis:** `v0.3` (versi 0.3.0). Sisa: dukungan `.tar.gz/.tar.xz`, sumber JDK/NDK arm64 yang terverifikasi, struktur SDK penuh untuk AGP.
 
 ## Fase 4 — Build Gradle (4–5 minggu)
 - [ ] Foreground service + process runner

@@ -1,4 +1,4 @@
-# Sally IDE — Android (v0.2)
+# Sally IDE — Android (v0.3)
 
 Sally IDE adalah editor kode Android berorientasi layar HP, menggunakan Kotlin, Jetpack Compose Material 3, dan Sora Editor. Rancangan proyek lengkap yang menjadi acuan ada di direktori [`docs/`](docs/).
 
@@ -22,9 +22,26 @@ Sally IDE adalah editor kode Android berorientasi layar HP, menggunakan Kotlin, 
 - Import/export ZIP proyek (folder `build/` dan `.gradle/` tidak ikut diekspor).
 - Workspace restore: proyek aktif dan tab terbuka dipulihkan saat aplikasi dibuka lagi.
 
+### Baru di v0.3 (Fase 3)
+
+- Layar **Toolchain** (ikon kunci inggris di Home, menu editor, atau tab Build): unduh/hapus `android.jar` per API level (sumber `Sable/android-platforms`), distribusi Gradle (daftar dari `services.gradle.org`, SHA-256 diverifikasi), dan paket kustom `.zip` untuk JDK/build-tools/NDK lewat URL HTTPS sendiri.
+- Downloader dengan progress, resume (HTTP Range), batal, cek disk kosong, dan checksum. Ekstraksi zip dilindungi zip-slip serta batas jumlah file/ukuran.
+- Struktur SDK dasar dibuat otomatis: `sdk/platforms/android-N/android.jar` + `source.properties`. SHA-256 jar disimpan lokal setelah unduhan pertama.
+- **Pengaturan proyek** (menu editor): Gradle, JDK, compileSdk, NDK, JVM args disimpan di `<proyek>/.sallyide/project.json`; nilai awal dideteksi dari `gradle-wrapper.properties` dan `build.gradle(.kts)`.
+- Info ukuran penyimpanan toolchain dan tombol bersihkan cache unduhan.
+
+### Perbaikan di v0.3
+
+- **Crash saat menekan snippet / chip autocomplete di toolbar.** Penyisipan teks sekarang satu operasi `Content.replace()` di main thread (bukan `setSelection` + `insertText`), popup autocomplete bawaan Sora yang punya thread sendiri dimatikan (chip autocomplete Sally yang dipakai), dan semua error ditangkap lalu ditampilkan lewat snackbar.
+- Teks yang sudah diketik sekarang benar-benar diganti oleh snippet/chip (sebelumnya disisipkan di depan kata).
+- Snippet mendukung tabstop: placeholder pertama langsung terpilih, tombol **TAB** pindah ke tabstop berikutnya, `$0` jadi posisi akhir, dan baris berikutnya ikut indentasi baris saat ini.
+- Tombol panah ↑ ↓ di extra key row menggerakkan kursor (sebelumnya menyisipkan karakter panah).
+- Event pergerakan kursor tidak lagi menyalin seluruh isi file; kata di kursor dihitung dari baris aktif saja.
+- Laporan crash: stack trace crash terakhir disimpan dan ditampilkan (bisa disalin) saat aplikasi dibuka lagi.
+
 ## Batasan tahap ini
 
-MVP ini **belum** menjalankan Gradle untuk membangun aplikasi Android dari dalam ponsel. Pindah file/drag & drop, buka folder luar lewat SAF, SDK/NDK manager, terminal, LSP penuh, dan build APK di perangkat direncanakan pada fase berikutnya sesuai `docs/ROADMAP.md`. Grammar yang dibundel merupakan grammar TextMate dasar, belum grammar vendor penuh yang sekomplet VS Code.
+Aplikasi ini **belum** menjalankan Gradle untuk membangun aplikasi Android dari dalam ponsel. Toolchain Manager baru mengunduh dan menata file; menjalankan biner (JDK/Gradle/aapt2) adalah Fase 0/4. `android.jar` dari Sable berisi implementasi framework asli, dan struktur platform yang dibutuhkan AGP (`build.prop`, `data/`, `framework.aidl`, `package.xml`) belum dibuat. Format arsip kustom baru `.zip`. Pindah file/drag & drop, buka folder luar lewat SAF, terminal, LSP penuh, dan build APK di perangkat direncanakan pada fase berikutnya sesuai `docs/ROADMAP.md`. Grammar yang dibundel merupakan grammar TextMate dasar, belum grammar vendor penuh yang sekomplet VS Code.
 
 ## Build lewat GitHub Actions
 
@@ -59,7 +76,7 @@ APK debug jika build lokal berhasil ada di `app/build/outputs/apk/debug/app-debu
 - Nama: Sally IDE
 - Package: `com.sally.ide`
 - Minimum Android: 8.0 (API 26)
-- Versi awal: `0.1.0`
+- Versi saat ini: `0.3.0`
 - Kredit: sally
 
 ## Validasi resource
@@ -69,3 +86,11 @@ python3 scripts/validate_assets.py
 ```
 
 Script ini memvalidasi JSON grammar/theme/snippet dan memastikan tiap grammar yang terdaftar tersedia di assets.
+
+## Unit test
+
+```sh
+./gradlew :app:testDebugUnitTest
+```
+
+Saat ini mencakup parser snippet (`SnippetParserTest`).

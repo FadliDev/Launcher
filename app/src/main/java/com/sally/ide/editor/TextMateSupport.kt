@@ -79,7 +79,7 @@ object TextMateSupport {
     fun languageFor(fileName: String): Language {
         val scope = scopeFor(fileName)
         if (!initialized || scope == null) return EmptyLanguage()
-        return runCatching { TextMateLanguage.create(scope, true) }
+        return runCatching { TextMateLanguage.create(scope, false) }
             .onFailure { Log.w(TAG, "No grammar for $fileName", it) }
             .getOrElse { EmptyLanguage() }
     }

@@ -102,12 +102,4 @@ object SnippetManager {
         }
         return result.sortedBy { it.prefix.lowercase() }
     }
-
-    /** Converts common VS Code tabstops to usable starter text; field navigation is planned next. */
-    fun renderBody(body: String): String = body
-        .replace(Regex("\\$\\{\\d+:([^}]+)}")) { it.groupValues[1] }
-        .replace(Regex("\\$\\{\\d+}"), "")
-        .replace(Regex("\\$\\d+"), "")
-        .replace("${'$'}{TM_FILENAME}", "")
-        .replace("${'$'}{TM_FILENAME_BASE}", "")
 }

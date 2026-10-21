@@ -38,6 +38,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowForward
 import androidx.compose.material.icons.filled.Build
@@ -119,6 +120,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -139,8 +141,12 @@ import com.sally.ide.ui.explorer.NewProjectDialog
 import com.sally.ide.ui.explorer.ProjectSearchDialog
 import com.sally.ide.data.SnippetManager
 import com.sally.ide.data.SnippetManager.Snippet
+import com.sally.ide.editor.SnippetController
+import com.sally.ide.editor.SnippetParser
 import com.sally.ide.editor.TextMateSupport
 import com.sally.ide.ui.theme.SallyTheme
+import com.sally.ide.ui.toolchain.ProjectSettingsDialog
+import com.sally.ide.ui.toolchain.ToolchainScreen
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -150,12 +156,13 @@ import java.io.File
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        CrashReporter.install(applicationContext)
         TextMateSupport.initialize(applicationContext)
         setContent { SallyIDEApp() }
     }
 }
 
-private enum class AppScreen { HOME, EDITOR, SETTINGS }
+private enum class AppScreen { HOME, EDITOR, SETTINGS, TOOLCHAIN }
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
@@ -178,12 +185,15 @@ private fun SallyIDEApp() {
     var showFindReplace by remember { mutableStateOf(false) }
     var showSnippets by remember { mutableStateOf(false) }
     var showMore by remember { mutableStateOf(false) }
+    var showProjectSettings by remember { mutableStateOf(false) }
     var findText by remember { mutableStateOf("") }
     var replaceText by remember { mutableStateOf("") }
     var pendingSaveId by remember { mutableStateOf<String?>(null) }
     var snippets by remember { mutableStateOf<List<Snippet>>(emptyList()) }
     var snippetStatus by remember { mutableStateOf("Menyiapkan snippet…") }
     var prefix by remember { mutableStateOf("") }
+    val snippetController = remember { SnippetController() }
+    var crashLog by remember { mutableStateOf(CrashReporter.read(context)) }
     var lineNumber by remember { mutableIntStateOf(1) }
     var columnNumber by remember { mutableIntStateOf(1) }
     var projectDir by remember { mutableStateOf<File?>(null) }
@@ -201,6 +211,13 @@ private fun SallyIDEApp() {
     }
 
     SideEffect { TextMateSupport.setTheme(darkTheme) }
+
+    fun editorAction(block: () -> Result<Unit>) {
+        block().onFailure { error ->
+            scope.launch { snackbar.showSnackbar("Gagal menyisipkan: ${error.message ?: error.javaClass.simpleName}") }
+        }
+        prefix = ""
+    }
 
     fun updateDocument(id: String, transform: (EditorDocument) -> EditorDocument) {
         val index = documents.indexOfFirst { it.id == id }
@@ -541,6 +558,7 @@ private fun SallyIDEApp() {
                                 Text(activeDoc?.let { TextMateSupport.languageLabel(it.name) } ?: "", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                             AppScreen.SETTINGS -> Text("Pengaturan", fontWeight = FontWeight.SemiBold)
+                            AppScreen.TOOLCHAIN -> Text("Toolchain", fontWeight = FontWeight.SemiBold)
                         }
                     },
                     navigationIcon = {
@@ -548,7 +566,7 @@ private fun SallyIDEApp() {
                             IconButton(onClick = { showNewFile = true }) { Icon(Icons.Default.Add, "File baru") }
                         } else {
                             IconButton(onClick = {
-                                if (screen == AppScreen.SETTINGS) screen = screenBeforeSettings else screen = AppScreen.HOME
+                                if (screen == AppScreen.SETTINGS || screen == AppScreen.TOOLCHAIN) screen = screenBeforeSettings else screen = AppScreen.HOME
                             }) { Icon(Icons.Default.ArrowBack, "Kembali") }
                         }
                     },
@@ -575,10 +593,15 @@ private fun SallyIDEApp() {
                                     }
                                     DropdownMenuItem(text = { Text("Snippet") }, leadingIcon = { Icon(Icons.Default.SnippetFolder, null) }, onClick = { showMore = false; showSnippets = true })
                                     DropdownMenuItem(text = { Text("Simpan sebagai…") }, leadingIcon = { Icon(Icons.Default.Save, null) }, onClick = { showMore = false; saveDocument(activeDoc, asCopy = true) })
+                                    if (projectDir != null) {
+                                        DropdownMenuItem(text = { Text("Pengaturan proyek") }, leadingIcon = { Icon(Icons.Default.Tune, null) }, onClick = { showMore = false; showProjectSettings = true })
+                                    }
+                                    DropdownMenuItem(text = { Text("Toolchain") }, leadingIcon = { Icon(Icons.Default.Build, null) }, onClick = { showMore = false; screenBeforeSettings = screen; screen = AppScreen.TOOLCHAIN })
                                     DropdownMenuItem(text = { Text("Pengaturan") }, leadingIcon = { Icon(Icons.Default.Settings, null) }, onClick = { showMore = false; screenBeforeSettings = screen; screen = AppScreen.SETTINGS })
                                 }
                             }
                         } else if (screen == AppScreen.HOME) {
+                            IconButton(onClick = { screenBeforeSettings = screen; screen = AppScreen.TOOLCHAIN }) { Icon(Icons.Default.Build, "Toolchain") }
                             IconButton(onClick = { screenBeforeSettings = screen; screen = AppScreen.SETTINGS }) { Icon(Icons.Default.Settings, "Pengaturan") }
                         }
                     },
@@ -596,16 +619,14 @@ private fun SallyIDEApp() {
                                 completionSuggestions.forEach { suggestion ->
                                     AssistChip(
                                         onClick = {
-                                            val editor = editorRef
-                                            if (editor != null) {
-                                                val line = editor.cursor.leftLine
-                                                val col = editor.cursor.leftColumn
-                                                val from = (col - prefix.length).coerceAtLeast(0)
-                                                editor.setSelection(line, from, true)
-                                                val insertion = suggestion.snippet?.let { SnippetManager.renderBody(it.body) } ?: suggestion.label
-                                                editor.insertText(insertion, insertion.length)
+                                            editorAction {
+                                                val snippet = suggestion.snippet
+                                                if (snippet != null) {
+                                                    snippetController.insert(editorRef, SnippetParser.expand(snippet.body, activeDoc?.name.orEmpty()), snippet.prefix, activeDoc?.name.orEmpty())
+                                                } else {
+                                                    snippetController.insertText(editorRef, suggestion.label, suggestion.label)
+                                                }
                                             }
-                                            prefix = ""
                                         },
                                         label = { Text(suggestion.label, maxLines = 1) },
                                         leadingIcon = { Icon(if (suggestion.snippet != null) Icons.Default.SnippetFolder else Icons.Default.Code, null, Modifier.size(16.dp)) }
@@ -615,13 +636,19 @@ private fun SallyIDEApp() {
                         }
                         ExtraKeyRow(onInsert = { value ->
                             val editor = editorRef
-                            if (editor != null) {
-                                if (value == "TAB") editor.indentOrCommitTab()
-                                else if (value == "←") editor.setSelection(editor.cursor.leftLine, (editor.cursor.leftColumn - 1).coerceAtLeast(0), true)
-                                else if (value == "→") editor.setSelection(editor.cursor.leftLine, (editor.cursor.leftColumn + 1).coerceAtMost(editor.text.getColumnCount(editor.cursor.leftLine)), true)
-                                else editor.insertText(value, value.length)
-                                editor.requestFocus()
+                            when (value) {
+                                "TAB" -> {
+                                    if (!snippetController.jumpNext(editor)) {
+                                        runCatching { SnippetController.usable(editor).indentOrCommitTab() }
+                                    }
+                                }
+                                "←" -> SnippetController.moveCursor(editor, 0, -1)
+                                "→" -> SnippetController.moveCursor(editor, 0, 1)
+                                "↑" -> SnippetController.moveCursor(editor, -1, 0)
+                                "↓" -> SnippetController.moveCursor(editor, 1, 0)
+                                else -> editorAction { snippetController.insertText(editor, value) }
                             }
+                            Unit
                         })
                         Row(
                             modifier = Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surfaceContainer).padding(horizontal = 14.dp, vertical = 5.dp),
@@ -645,7 +672,7 @@ private fun SallyIDEApp() {
                             },
                             onSearch = { showFindReplace = true },
                             onSnippets = { showSnippets = true },
-                            onBuild = { scope.launch { snackbar.showSnackbar("Build Gradle di HP masuk fase toolchain berikutnya.") } },
+                            onBuild = { screenBeforeSettings = screen; screen = AppScreen.TOOLCHAIN; scope.launch { snackbar.showSnackbar("Build Gradle hadir di v0.4. Siapkan toolchain dulu di sini.") } },
                             onSettings = { screenBeforeSettings = screen; screen = AppScreen.SETTINGS }
                         )
                     }
@@ -654,7 +681,7 @@ private fun SallyIDEApp() {
                         onFiles = { screen = AppScreen.HOME },
                         onSearch = { if (activeDoc != null) { screen = AppScreen.EDITOR; showFindReplace = true } },
                         onSnippets = { if (activeDoc != null) { screen = AppScreen.EDITOR; showSnippets = true } },
-                        onBuild = { scope.launch { snackbar.showSnackbar("Build Gradle di HP akan ditambahkan pada fase toolchain.") } },
+                        onBuild = { screenBeforeSettings = screen; screen = AppScreen.TOOLCHAIN; scope.launch { snackbar.showSnackbar("Build Gradle hadir di v0.4. Siapkan toolchain dulu di sini.") } },
                         onSettings = { screenBeforeSettings = screen; screen = AppScreen.SETTINGS }
                     )
                 }
@@ -693,7 +720,7 @@ private fun SallyIDEApp() {
                                 if (documents.isEmpty()) screen = AppScreen.HOME
                             },
                             onContent = { id, value, word, line, col ->
-                                updateDocument(id) { it.copy(content = value) }
+                                if (value != null) updateDocument(id) { it.copy(content = value) }
                                 prefix = word
                                 lineNumber = line + 1
                                 columnNumber = col + 1
@@ -704,6 +731,10 @@ private fun SallyIDEApp() {
                         )
                     }
                 }
+                AppScreen.TOOLCHAIN -> ToolchainScreen(
+                    modifier = Modifier.padding(padding),
+                    onMessage = { msg -> scope.launch { snackbar.showSnackbar(msg) } }
+                )
                 AppScreen.SETTINGS -> SettingsScreen(
                     modifier = Modifier.padding(padding),
                     darkTheme = darkTheme,
@@ -717,6 +748,36 @@ private fun SallyIDEApp() {
             }
         }
         }
+    }
+
+    val settingsDir = projectDir
+    if (showProjectSettings && settingsDir != null) {
+        ProjectSettingsDialog(
+            projectDir = settingsDir,
+            onDismiss = { showProjectSettings = false },
+            onSaved = { msg -> scope.launch { snackbar.showSnackbar(msg) }; explorerTick++ }
+        )
+    }
+
+    val pendingCrash = crashLog
+    if (pendingCrash != null) {
+        AlertDialog(
+            onDismissRequest = { CrashReporter.clear(context); crashLog = null },
+            title = { Text("Crash terakhir", fontWeight = FontWeight.Bold) },
+            text = {
+                Column(Modifier.fillMaxWidth().height(300.dp).verticalScroll(rememberScrollState())) {
+                    Text(pendingCrash, style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace, fontSize = 10.sp))
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                    clipboard.setPrimaryClip(android.content.ClipData.newPlainText("Sally IDE crash", pendingCrash))
+                    scope.launch { snackbar.showSnackbar("Stack trace disalin") }
+                }) { Text("Salin") }
+            },
+            dismissButton = { TextButton(onClick = { CrashReporter.clear(context); crashLog = null }) { Text("Tutup") } }
+        )
     }
 
     if (showNewProject) {
@@ -796,17 +857,10 @@ private fun SallyIDEApp() {
             language = activeDoc?.let { TextMateSupport.languageLabel(it.name) } ?: "Bahasa",
             onDismiss = { showSnippets = false },
             onInsert = { snippet ->
-                val editor = editorRef
-                if (editor != null) {
-                    val line = editor.cursor.leftLine
-                    val col = editor.cursor.leftColumn
-                    val replaceLength = prefix.length.coerceAtMost(col)
-                    if (replaceLength > 0) editor.setSelection(line, col - replaceLength, true)
-                    val body = SnippetManager.renderBody(snippet.body)
-                    editor.insertText(body, body.length)
-                    prefix = ""
-                }
                 showSnippets = false
+                editorAction {
+                    snippetController.insert(editorRef, SnippetParser.expand(snippet.body, activeDoc?.name.orEmpty()), snippet.prefix, activeDoc?.name.orEmpty())
+                }
             }
         )
     }
@@ -985,7 +1039,7 @@ private fun EditorScreen(
     editorHolder: (CodeEditor?) -> Unit,
     onSelectTab: (String) -> Unit,
     onCloseTab: (String) -> Unit,
-    onContent: (String, String, String, Int, Int) -> Unit,
+    onContent: (String, String?, String, Int, Int) -> Unit,
     onOpen: () -> Unit,
     onSave: () -> Unit,
     onFind: () -> Unit
@@ -1029,18 +1083,17 @@ private fun EditorScreen(
                         setEditorLanguage(TextMateSupport.languageFor(activeDoc.name))
                         setText(activeDoc.content)
                         editorHolder(this)
+                        SnippetController.disableBuiltInCompletion(this)
                         subscribeAlways(ContentChangeEvent::class.java) { _ ->
-                            val current = text.toString()
                             val row = cursor.leftLine
                             val col = cursor.leftColumn
-                            val word = wordAtCursor(current, row, col)
-                            onContent(activeDoc.id, current, word, row, col)
+                            val word = SnippetController.wordBefore(text.getLineString(row), col)
+                            onContent(activeDoc.id, text.toString(), word, row, col)
                         }
                         subscribeAlways(SelectionChangeEvent::class.java) { _ ->
-                            val current = text.toString()
                             val row = cursor.leftLine
                             val col = cursor.leftColumn
-                            onContent(activeDoc.id, current, wordAtCursor(current, row, col), row, col)
+                            onContent(activeDoc.id, null, SnippetController.wordBefore(text.getLineString(row), col), row, col)
                         }
                     }
                 },
@@ -1076,7 +1129,7 @@ private fun buildCompletionSuggestions(
     Regex("[A-Za-z_$][A-Za-z0-9_$]{1,}").findAll(content).map { it.value }
         .distinct().filter { it.startsWith(prefix, ignoreCase = true) }
         .take(3).forEach { suggestions.putIfAbsent(it.lowercase(), CompletionSuggestion(it)) }
-    return suggestions.values.take(7)
+    return suggestions.values.filter { !(it.snippet == null && it.label == prefix) }.take(7)
 }
 
 private fun languageKeywords(fileName: String): List<String> {
@@ -1096,12 +1149,6 @@ private fun languageKeywords(fileName: String): List<String> {
         else -> emptyList()
     }
     return (common + specific).distinct()
-}
-
-private fun wordAtCursor(text: String, line: Int, column: Int): String {
-    val currentLine = text.split('\n').getOrNull(line).orEmpty()
-    val safeColumn = column.coerceIn(0, currentLine.length)
-    return currentLine.take(safeColumn).takeLastWhile { it.isLetterOrDigit() || it == '_' || it == '$' }
 }
 
 @Composable
@@ -1163,7 +1210,7 @@ private fun SettingsScreen(
         Text("Editor", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
         SettingInfoRow(Icons.Default.Code, "Mesin editor", "Sora Editor · TextMate grammar")
         SettingInfoRow(Icons.Default.SnippetFolder, "Snippet", "Pack lokal + unduhan per bahasa")
-        SettingInfoRow(Icons.Default.Terminal, "Build lokal", "Toolchain dan build Gradle berada di fase selanjutnya")
+        SettingInfoRow(Icons.Default.Terminal, "Build lokal", "Toolchain (SDK, Gradle) siap di v0.3; build Gradle di v0.4")
         HorizontalDivider()
         Text("Tentang Sally IDE", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
         Text("Versi 0.1.0 · dibuat oleh sally", color = MaterialTheme.colorScheme.onSurfaceVariant)
