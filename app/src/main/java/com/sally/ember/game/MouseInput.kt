@@ -48,8 +48,12 @@ internal class MouseInput(private val host: View, private val enabled: () -> Boo
     fun release() { wantCapture = false; if (host.hasPointerCapture()) host.releasePointerCapture() }
 
     private fun placeAbsolute(x: Float, y: Float) {
-        val w = (CB.windowWidth - 1).coerceAtLeast(0).toFloat(); val h = (CB.windowHeight - 1).coerceAtLeast(0).toFloat()
-        CB.sendCursorPos(x.coerceIn(0f, w), y.coerceIn(0f, h))
+        // Android MotionEvent coordinates are in host-view space; GLFW expects native surface pixels.
+        val sx = if (host.width > 0 && CB.windowWidth > 0) CB.windowWidth.toFloat() / host.width else 1f
+        val sy = if (host.height > 0 && CB.windowHeight > 0) CB.windowHeight.toFloat() / host.height else 1f
+        val w = (CB.windowWidth - 1).coerceAtLeast(0).toFloat()
+        val h = (CB.windowHeight - 1).coerceAtLeast(0).toFloat()
+        CB.sendCursorPos((x * sx).coerceIn(0f, w), (y * sy).coerceIn(0f, h))
     }
 
     private fun glfwButton(androidButton: Int): Int = when (androidButton) {
@@ -120,7 +124,9 @@ internal class MouseInput(private val host: View, private val enabled: () -> Boo
         }
 
         if (CB.isGrabbing()) {
-            if (dx != 0f || dy != 0f) CB.sendCursorPos(CB.mouseX + dx, CB.mouseY + dy)
+            val sx = if (host.width > 0 && CB.windowWidth > 0) CB.windowWidth.toFloat() / host.width else 1f
+            val sy = if (host.height > 0 && CB.windowHeight > 0) CB.windowHeight.toFloat() / host.height else 1f
+            if (dx != 0f || dy != 0f) CB.sendCursorPos(CB.mouseX + dx * sx, CB.mouseY + dy * sy)
         } else if (e.pointerCount >= 2) {
             // Two-finger touchpad swipe = scroll.
             scrollAcc += dy

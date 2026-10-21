@@ -188,13 +188,33 @@ internal class LookView(ctx: Context) : View(ctx) {
     private val fill = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.WHITE }
     private val edge = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; color = Color.BLACK; strokeWidth = 1.5f * d }
 
+    private fun toWindowX(x: Float): Float =
+        if (width > 0 && CB.windowWidth > 0) x * CB.windowWidth / width else x
+
+    private fun toWindowY(y: Float): Float =
+        if (height > 0 && CB.windowHeight > 0) y * CB.windowHeight / height else y
+
+    private fun fromWindowX(x: Float): Float =
+        if (CB.windowWidth > 0) x * width / CB.windowWidth else x
+
+    private fun fromWindowY(y: Float): Float =
+        if (CB.windowHeight > 0) y * height / CB.windowHeight else y
+
+    private fun placePointer(x: Float, y: Float) {
+        CB.sendCursorPos(
+            toWindowX(x).coerceIn(0f, (CB.windowWidth - 1).coerceAtLeast(0).toFloat()),
+            toWindowY(y).coerceIn(0f, (CB.windowHeight - 1).coerceAtLeast(0).toFloat())
+        )
+    }
+
     override fun onDraw(c: Canvas) {
         if (CB.isGrabbing()) return
-        if (id == -1) CB.syncCursorFromGame() // game may have recentred it (menu opened); not while a finger is steering it
-        c.save(); c.translate(CB.mouseX, CB.mouseY)
+        if (id == -1) CB.syncCursorFromGame()
+        // GLFW coordinates are surface pixels; Android overlay coordinates may differ after insets/scaling.
+        c.save(); c.translate(fromWindowX(CB.mouseX), fromWindowY(CB.mouseY))
         c.drawPath(arrow, fill); c.drawPath(arrow, edge)
         c.restore()
-        postInvalidateOnAnimation() // the game can move the cursor itself (e.g. recentre), so keep redrawing in menus
+        postInvalidateOnAnimation()
     }
 
     private fun avgY(e: MotionEvent): Float { var s = 0f; for (i in 0 until e.pointerCount) s += e.getY(i); return s / e.pointerCount }
@@ -205,7 +225,7 @@ internal class LookView(ctx: Context) : View(ctx) {
             MotionEvent.ACTION_DOWN -> {
                 id = e.getPointerId(0); lastX = e.x; lastY = e.y; downX = e.x; downY = e.y; downAt = e.eventTime
                 moved = false; holding = false; multi = false; scrolled = false; noTap = false; scrollAcc = 0f
-                if (!CB.isGrabbing()) { if (directTouch) CB.sendCursorPos(e.x, e.y) else CB.syncCursorFromGame() }
+                if (!CB.isGrabbing()) { if (directTouch) placePointer(e.x, e.y) else CB.syncCursorFromGame() }
                 postDelayed(longPress, LONG_PRESS_MS)
             }
             MotionEvent.ACTION_POINTER_DOWN -> if (!multi) {
@@ -230,14 +250,16 @@ internal class LookView(ctx: Context) : View(ctx) {
                 val dx = x - lastX; val dy = y - lastY
                 if (!moved && hypot(x - downX, y - downY) > slop) { moved = true; if (!holding) removeCallbacks(longPress) }
                 lastX = x; lastY = y
+                val sx = if (width > 0 && CB.windowWidth > 0) CB.windowWidth.toFloat() / width else 1f
+                val sy = if (height > 0 && CB.windowHeight > 0) CB.windowHeight.toFloat() / height else 1f
                 if (CB.isGrabbing()) {
-                    if (moved || holding) CB.sendCursorPos(CB.mouseX + dx * camSens, CB.mouseY + dy * camSens)
+                    if (moved || holding) CB.sendCursorPos(CB.mouseX + dx * camSens * sx, CB.mouseY + dy * camSens * sy)
                 } else if (directTouch) {
-                    CB.sendCursorPos(x, y)
+                    placePointer(x, y)
                 } else {
                     CB.sendCursorPos(
-                        (CB.mouseX + dx * padSens).coerceIn(0f, (CB.windowWidth - 1).coerceAtLeast(0).toFloat()),
-                        (CB.mouseY + dy * padSens).coerceIn(0f, (CB.windowHeight - 1).coerceAtLeast(0).toFloat())
+                        (CB.mouseX + dx * padSens * sx).coerceIn(0f, (CB.windowWidth - 1).coerceAtLeast(0).toFloat()),
+                        (CB.mouseY + dy * padSens * sy).coerceIn(0f, (CB.windowHeight - 1).coerceAtLeast(0).toFloat())
                     )
                 }
             }
