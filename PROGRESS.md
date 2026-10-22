@@ -82,6 +82,11 @@ Kode ditulis dari pengetahuan API Sora-editor 0.23.x tanpa bisa dikompilasi. Tit
 3. Kalau stabil → rilis `v0.1` lalu lanjut sesuai urutan cepat ROADMAP: **Fase 0 spike → Fase 3 → Fase 4** (build di HP)
 
 ## Log perubahan
+### 2026-10-22 — v0.2.1b (fix dari screenshot)
+- Kurung/tanda baca tak terlihat di tema gelap: tema TextMate tak punya warna default (entri tanpa `scope`) → ditambah, plus `TEXT_NORMAL`/`WHOLE_BACKGROUND` di `applyChrome`
+- Bracket match: warna sorotan (`HIGHLIGHTED_DELIMITERS_*`) pakai primary biru + latar container, tidak lagi hitam tebal
+- Ikon status bar putih di tema terang (tidak terbaca): `enableEdgeToEdge` kini mengikuti tema app lewat `SideEffect`
+- Rawan kompilasi: `HIGHLIGHTED_DELIMITERS_*` di `EditorRuntime.applyChrome` (hapus barisnya kalau tak ada)
 ### 2026-10-22 — v0.2.1 (aksen biru + syntax highlight MD3)
 - **UI semua biru:** `Theme.kt` memakai skema MD3 statis (primary/secondary/tertiary/container/netral bernuansa biru, seed ~#0B57D0) untuk Terang/Gelap/AMOLED. **Warna dinamis (Material You) dihapus** (toggle di Setelan, `Prefs.dynamicColor`, `setDynamic`) karena menimpa aksen dengan warna wallpaper. Ikon file di explorer jadi keluarga biru; ikon launcher biru.
 - **Tema syntax baru** (`Sally Dark / AMOLED / Light`, dihasilkan `tools/gen_assets.py`): latar = token surface MD3 yang sama dengan app; keyword = primary biru, tipe = cyan, fungsi = kuning pucat, string = mint, angka = oranye lembut, konstanta = lavender, anotasi = pink lembut, komentar = outline (italic). Kontras ≥ 4.5:1.

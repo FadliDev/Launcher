@@ -55,6 +55,13 @@ object EditorRuntime {
         val outlineVar = if (light) 0xFFC4C6D0.toInt() else 0xFF44474E.toInt()
         val thumb = if (light) 0x660B57D0 else 0x66ADC6FF
         val match = if (light) 0xFFFFE08A.toInt() else 0xFF5C4A00.toInt()
+        val fg = if (light) 0xFF191C20.toInt() else 0xFFE2E2E9.toInt()
+        val bracketBg = if (light) 0xFFD8E2FF.toInt() else 0xFF1F3B6E.toInt()
+        s.setColor(EditorColorScheme.WHOLE_BACKGROUND, bg)
+        s.setColor(EditorColorScheme.TEXT_NORMAL, fg) // teks tanpa scope (kurung, tanda baca)
+        s.setColor(EditorColorScheme.HIGHLIGHTED_DELIMITERS_FOREGROUND, primary)
+        s.setColor(EditorColorScheme.HIGHLIGHTED_DELIMITERS_BACKGROUND, bracketBg)
+        s.setColor(EditorColorScheme.HIGHLIGHTED_DELIMITERS_UNDERLINE, primary)
         s.setColor(EditorColorScheme.LINE_NUMBER_BACKGROUND, bg)
         s.setColor(EditorColorScheme.LINE_DIVIDER, outlineVar)
         s.setColor(EditorColorScheme.SELECTION_INSERT, primary)

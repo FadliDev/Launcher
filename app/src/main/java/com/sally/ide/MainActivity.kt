@@ -2,9 +2,11 @@ package com.sally.ide
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -13,6 +15,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sally.ide.ui.CrashScreen
 import com.sally.ide.ui.SallyRoot
 import com.sally.ide.ui.SallyTheme
+import com.sally.ide.ui.isDark
 
 class MainActivity : ComponentActivity() {
     private val vm: IdeViewModel by viewModels()
@@ -23,6 +26,12 @@ class MainActivity : ComponentActivity() {
         setContent {
             val prefs by vm.prefs.collectAsStateWithLifecycle()
             var crash by remember { mutableStateOf(CrashLog.read(this)) }
+            val dark = isDark(prefs.themeMode)
+            SideEffect { // ikon status/navigation bar ikut tema app, bukan tema sistem
+                val t = android.graphics.Color.TRANSPARENT
+                val style = if (dark) SystemBarStyle.dark(t) else SystemBarStyle.light(t, t)
+                enableEdgeToEdge(statusBarStyle = style, navigationBarStyle = style)
+            }
             SallyTheme(prefs.themeMode) {
                 val c = crash
                 if (c != null) {

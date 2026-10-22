@@ -12,6 +12,12 @@
   },
   "tokenColors": [
     {
+      "settings": {
+        "foreground": "#E2E2E9",
+        "background": "#000000"
+      }
+    },
+    {
       "scope": "comment",
       "settings": {
         "foreground": "#8E9099",

@@ -235,7 +235,7 @@ def theme(name, typ, bg, fg, line_hl, sel, gutter, gutter_active, c):
         "colors": {"editor.background": bg, "editor.foreground": fg, "editor.lineHighlightBackground": line_hl,
                    "editor.selectionBackground": sel, "editorCursor.foreground": c["cursor"],
                    "editorLineNumber.foreground": gutter, "editorLineNumber.activeForeground": gutter_active},
-        "tokenColors": [{"scope": s, "settings": ({"foreground": col, "fontStyle": st} if st else {"foreground": col})} for s, col, st in tok]}
+        "tokenColors": [{"settings": {"foreground": fg, "background": bg}}] + [{"scope": s, "settings": ({"foreground": col, "fontStyle": st} if st else {"foreground": col})} for s, col, st in tok]}
 
 dark = dict(comment="#8E9099", string="#A8DAB5", num="#FFB784", kw="#ADC6FF", mod="#8FB0F5", op="#C4C6D0",
             const="#D6BBFB", type="#7FD6E6", fn="#F1DC9C", ann="#F0B8D8", attr="#9CCBFB", prop="#C3D3F5",
