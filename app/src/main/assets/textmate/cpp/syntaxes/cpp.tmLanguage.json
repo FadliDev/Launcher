@@ -1,0 +1,73 @@
+{
+  "scopeName": "source.cpp",
+  "name": "C/C++",
+  "patterns": [
+    {
+      "name": "keyword.control.directive",
+      "match": "^\\s*#\\s*\\w+"
+    },
+    {
+      "name": "comment.block",
+      "begin": "/\\*",
+      "end": "\\*/"
+    },
+    {
+      "name": "comment.line",
+      "match": "//.*$"
+    },
+    {
+      "name": "string.quoted.double",
+      "begin": "\"",
+      "end": "\"",
+      "patterns": [
+        {
+          "name": "constant.character.escape",
+          "match": "\\\\."
+        }
+      ]
+    },
+    {
+      "name": "string.quoted.single",
+      "begin": "'",
+      "end": "'",
+      "patterns": [
+        {
+          "name": "constant.character.escape",
+          "match": "\\\\."
+        }
+      ]
+    },
+    {
+      "name": "constant.numeric",
+      "match": "\\b(?:0[xX][0-9a-fA-F_]+|0[bB][01_]+|\\d[\\d_]*(?:\\.\\d+)?(?:[eE][+-]?\\d+)?[fFLlDdUu]*)\\b"
+    },
+    {
+      "name": "storage.type.annotation",
+      "match": "@[A-Za-z_][\\w.]*"
+    },
+    {
+      "name": "keyword.control",
+      "match": "\\b(?:alignas|alignof|asm|auto|break|case|catch|class|const|constexpr|const_cast|continue|decltype|default|delete|do|dynamic_cast|else|enum|explicit|export|extern|for|friend|goto|if|inline|mutable|namespace|new|noexcept|operator|private|protected|public|register|reinterpret_cast|return|sizeof|static|static_assert|static_cast|struct|switch|template|this|throw|try|typedef|typeid|typename|union|using|virtual|volatile|while|override|final)\\b"
+    },
+    {
+      "name": "storage.type",
+      "match": "\\b(?:bool|char|double|float|int|long|short|signed|unsigned|void|size_t|int8_t|int16_t|int32_t|int64_t|uint8_t|uint16_t|uint32_t|uint64_t|wchar_t|char16_t|char32_t)\\b"
+    },
+    {
+      "name": "constant.language",
+      "match": "\\b(?:true|false|nullptr|NULL)\\b"
+    },
+    {
+      "name": "string.quoted.other",
+      "match": "<[\\w./]+>"
+    },
+    {
+      "name": "entity.name.type",
+      "match": "\\b[A-Z][A-Za-z0-9_]*\\b"
+    },
+    {
+      "name": "entity.name.function",
+      "match": "\\b[A-Za-z_][A-Za-z0-9_]*(?=\\s*\\()"
+    }
+  ]
+}

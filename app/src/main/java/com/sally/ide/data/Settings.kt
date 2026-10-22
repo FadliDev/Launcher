@@ -1,0 +1,51 @@
+package com.sally.ide.data
+
+import android.content.Context
+import androidx.datastore.preferences.core.MutablePreferences
+import androidx.datastore.preferences.core.booleanPreferencesKey
+import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.floatPreferencesKey
+import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.datastore.preferences.preferencesDataStore
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
+
+private val Context.store by preferencesDataStore(name = "sally_ide_settings")
+
+enum class ThemeMode(val label: String) { SYSTEM("Ikuti sistem"), LIGHT("Terang"), DARK("Gelap"), AMOLED("AMOLED") }
+
+data class Prefs(
+    val themeMode: ThemeMode = ThemeMode.SYSTEM,
+    val dynamicColor: Boolean = true,
+    val fontSize: Float = 14f,
+    val wordWrap: Boolean = false,
+    val lineNumbers: Boolean = true,
+    val tabSize: Int = 4,
+)
+
+object Keys {
+    val THEME = stringPreferencesKey("theme_mode")
+    val DYNAMIC = booleanPreferencesKey("dynamic_color")
+    val FONT = floatPreferencesKey("font_size")
+    val WRAP = booleanPreferencesKey("word_wrap")
+    val LINES = booleanPreferencesKey("line_numbers")
+    val TAB = intPreferencesKey("tab_size")
+}
+
+class SettingsRepo(private val ctx: Context) {
+    val flow: Flow<Prefs> = ctx.store.data.map { p ->
+        Prefs(
+            themeMode = p[Keys.THEME]?.let { runCatching { ThemeMode.valueOf(it) }.getOrNull() } ?: ThemeMode.SYSTEM,
+            dynamicColor = p[Keys.DYNAMIC] ?: true,
+            fontSize = (p[Keys.FONT] ?: 14f).coerceIn(10f, 24f),
+            wordWrap = p[Keys.WRAP] ?: false,
+            lineNumbers = p[Keys.LINES] ?: true,
+            tabSize = (p[Keys.TAB] ?: 4).coerceIn(2, 8),
+        )
+    }
+
+    suspend fun edit(block: (MutablePreferences) -> Unit) {
+        ctx.store.edit { block(it) }
+    }
+}

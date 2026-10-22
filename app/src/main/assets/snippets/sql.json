@@ -1,7 +1,0 @@
-{
-  "select": {
-    "prefix": "select",
-    "body": "SELECT ${1:*}\nFROM ${2:table_name}\nWHERE ${3:condition};",
-    "description": "SELECT query"
-  }
-}

@@ -1,0 +1,74 @@
+{
+  "scopeName": "source.groovy",
+  "name": "Gradle (Groovy/KTS)",
+  "patterns": [
+    {
+      "name": "string.quoted.triple",
+      "begin": "'''|\"\"\"",
+      "end": "'''|\"\"\""
+    },
+    {
+      "name": "comment.block",
+      "begin": "/\\*",
+      "end": "\\*/"
+    },
+    {
+      "name": "comment.line",
+      "match": "//.*$"
+    },
+    {
+      "name": "string.quoted.double",
+      "begin": "\"",
+      "end": "\"",
+      "patterns": [
+        {
+          "name": "constant.character.escape",
+          "match": "\\\\."
+        }
+      ]
+    },
+    {
+      "name": "string.quoted.single",
+      "begin": "'",
+      "end": "'",
+      "patterns": [
+        {
+          "name": "constant.character.escape",
+          "match": "\\\\."
+        }
+      ]
+    },
+    {
+      "name": "constant.numeric",
+      "match": "\\b(?:0[xX][0-9a-fA-F_]+|0[bB][01_]+|\\d[\\d_]*(?:\\.\\d+)?(?:[eE][+-]?\\d+)?[fFLlDdUu]*)\\b"
+    },
+    {
+      "name": "storage.type.annotation",
+      "match": "@[A-Za-z_][\\w.]*"
+    },
+    {
+      "name": "keyword.control",
+      "match": "\\b(?:as|assert|break|case|catch|class|continue|def|default|else|enum|extends|final|finally|for|if|implements|import|in|instanceof|interface|new|package|private|protected|public|return|static|super|switch|this|throw|throws|try|while)\\b"
+    },
+    {
+      "name": "storage.type",
+      "match": "\\b(?:String|Integer|Boolean|List|Map)\\b"
+    },
+    {
+      "name": "constant.language",
+      "match": "\\b(?:true|false|null)\\b"
+    },
+    {
+      "name": "support.function",
+      "match": "\\b(?:plugins|dependencies|android|repositories|apply|implementation|api|compileOnly|runtimeOnly|testImplementation|androidTestImplementation|kapt|ksp|id|version|buildscript|allprojects|subprojects|task|tasks|ext|include|pluginManagement)\\b"
+    },
+    {
+      "name": "entity.name.type",
+      "match": "\\b[A-Z][A-Za-z0-9_]*\\b"
+    },
+    {
+      "name": "entity.name.function",
+      "match": "\\b[A-Za-z_][A-Za-z0-9_]*(?=\\s*\\()"
+    }
+  ]
+}

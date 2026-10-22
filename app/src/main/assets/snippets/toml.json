@@ -1,7 +1,0 @@
-{
-  "section": {
-    "prefix": "section",
-    "body": "[${1:section}]\n${2:key} = ${3:\"value\"}",
-    "description": "TOML section"
-  }
-}

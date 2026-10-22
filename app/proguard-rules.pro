@@ -1,1 +1,3 @@
-# Sally IDE MVP keeps minification disabled until release-specific rules are verified.
+-keep class org.eclipse.tm4e.** { *; }
+-keep class org.joni.** { *; }
+-keep class io.github.rosemoe.sora.** { *; }

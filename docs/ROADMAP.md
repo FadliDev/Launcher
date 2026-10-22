@@ -1,5 +1,7 @@
 # ROADMAP — Sally IDE
 
+> Legenda progres: `[ ]` belum · `[~]` kode sudah ditulis, **belum dikompilasi/diuji di perangkat** · `[x]` terverifikasi di perangkat. Detail di `/PROGRESS.md`.
+
 Dibuat bertahap. Estimasi waktu kasar untuk 1 developer; sesuaikan dengan kecepatan kerja.
 
 ```
@@ -30,42 +32,39 @@ Tujuan: pastikan ide ini feasible sebelum bangun UI besar.
 **Exit criteria:** minimal 1 build APK sukses di HP nyata.
 
 ## Fase 1 — Editor dasar / MVP (3–4 minggu)
-- [ ] Setup proyek: Compose, MD3, modul, CI GitHub Actions
-- [ ] Integrasi Sora-editor
-- [ ] Highlighting Java, Kotlin, C++, XML, Gradle, JSON
-- [ ] Tab multi-file, undo/redo, find & replace
+- [~] Setup proyek: Compose, MD3, modul, CI GitHub Actions
+- [~] Integrasi Sora-editor
+- [~] Highlighting Java, Kotlin, C++, XML, Gradle, JSON
+- [~] Tab multi-file, undo/redo, find & replace
 - [ ] Auto indent, auto close bracket, bracket match, folding
-- [ ] Extra key row
-- [x] Snippet engine + snippet bawaan (tabstop, placeholder, TAB untuk lompat)
-- [x] Auto complete dasar (keyword + snippet + kata di file) — chip di atas extra key row; popup bawaan Sora dimatikan
-- [ ] Tema editor: light/dark + dynamic color MD3
+- [~] Extra key row
+- [~] Snippet engine + snippet bawaan
+- [~] Auto complete dasar (keyword + snippet + kata di file)
+- [~] Tema editor: light/dark + dynamic color MD3
 
 **Rilis:** `v0.1` — editor teks yang enak dipakai.
 
 ## Fase 2 — Proyek & file explorer (2–3 minggu)
-- [x] Buka folder proyek (storage internal app: `files/projects/<nama>`)
-- [ ] Buka folder proyek dari penyimpanan luar lewat SAF
-- [x] Sidebar tree file explorer + icon/warna per tipe file
-- [x] Buat/rename/hapus/duplikat (long-press menu)
-- [ ] Pindah file, drag & drop, multi-select
-- [x] Pencarian file (fuzzy) + cari teks seluruh proyek (klik hasil lompat ke baris)
-- [x] Import/export zip (proteksi zip-slip, batas ukuran)
-- [x] Proyek terakhir, workspace restore (tab terbuka + proyek aktif)
-- [x] Layout adaptif: drawer di HP, sidebar tetap di layar ≥ 720dp
-- [ ] Divider sidebar/panel bawah yang bisa digeser
-- [x] Template proyek (Android Kotlin, Android Java, Mod Fabric, kosong)
+- [ ] Buka folder proyek (SAF atau storage app)
+- [ ] Sidebar tree file explorer + icon per tipe file
+- [ ] Buat/rename/hapus/duplikat/pindah, multi-select
+- [ ] Pencarian file (fuzzy) + cari teks seluruh proyek
+- [ ] Import/export zip
+- [ ] Proyek terakhir, workspace restore (tab terbuka)
+- [ ] Layout adaptif: HP, tablet, landscape
+- [ ] Template proyek (Android Kotlin, Java, Fabric dulu)
 
-**Rilis:** `v0.2` (versi 0.2.0 di `app/build.gradle.kts`).
+**Rilis:** `v0.2`.
 
 ## Fase 3 — SDK & toolchain manager (2–3 minggu)
-- [x] Layar "Toolchain": Gradle, SDK platform; JDK/build-tools/NDK lewat paket kustom `.zip` (URL sendiri)
-- [x] Downloader (resume, checksum, progress, hapus)
-- [x] Unduh `android.jar` per API dari `sable/android-platforms`
-- [ ] Generate struktur SDK agar dikenali AGP (baru `platforms/android-N/android.jar` + `source.properties`; `package.xml`, `build.prop`, `data/` menyusul)
-- [x] Setting per proyek `.sallyide/project.json`
-- [x] Info ukuran storage + bersihkan cache
+- [ ] Layar "Toolchain": JDK, Gradle, SDK, build-tools, NDK
+- [ ] Downloader (resume, checksum, progress, hapus)
+- [ ] Unduh `android.jar` per API dari `sable/android-platforms`
+- [ ] Generate struktur SDK agar dikenali AGP
+- [ ] Setting per proyek `.sallyide/project.json`
+- [ ] Info ukuran storage + bersihkan cache
 
-**Rilis:** `v0.3` (versi 0.3.0). Sisa: dukungan `.tar.gz/.tar.xz`, sumber JDK/NDK arm64 yang terverifikasi, struktur SDK penuh untuk AGP.
+**Rilis:** `v0.3`.
 
 ## Fase 4 — Build Gradle (4–5 minggu)
 - [ ] Foreground service + process runner

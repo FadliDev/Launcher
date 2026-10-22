@@ -1,7 +1,0 @@
-{
-  "main": {
-    "prefix": "main",
-    "body": "import Foundation\n\n$0",
-    "description": "Swift starter"
-  }
-}

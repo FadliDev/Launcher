@@ -1,7 +1,0 @@
-{
-  "shebang": {
-    "prefix": "shebang",
-    "body": "#!/usr/bin/env bash\nset -euo pipefail\n\n$0",
-    "description": "Bash script"
-  }
-}

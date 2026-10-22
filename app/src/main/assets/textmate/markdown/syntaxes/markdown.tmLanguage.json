@@ -1,0 +1,44 @@
+{
+  "scopeName": "text.html.markdown",
+  "name": "Markdown",
+  "patterns": [
+    {
+      "name": "markup.heading",
+      "match": "^#{1,6}\\s.*$"
+    },
+    {
+      "name": "markup.raw.block",
+      "begin": "^\\s*```.*$",
+      "end": "^\\s*```\\s*$"
+    },
+    {
+      "name": "markup.inline.raw",
+      "match": "`[^`\\n]+`"
+    },
+    {
+      "name": "markup.bold",
+      "match": "\\*\\*[^*\\n]+\\*\\*|__[^_\\n]+__"
+    },
+    {
+      "name": "markup.italic",
+      "match": "\\*[^*\\s][^*\\n]*\\*|\\b_[^_\\s][^_\\n]*_\\b"
+    },
+    {
+      "name": "markup.underline.link",
+      "match": "\\[[^\\]\\n]*\\]\\([^)\\n]*\\)"
+    },
+    {
+      "name": "markup.quote",
+      "match": "^\\s*>.*$"
+    },
+    {
+      "name": "punctuation.definition.list",
+      "match": "^\\s*(?:[-*+]|\\d+\\.)\\s"
+    },
+    {
+      "name": "comment.block",
+      "begin": "<!--",
+      "end": "-->"
+    }
+  ]
+}

@@ -1,12 +1,58 @@
 {
-  "root": {
-    "prefix": "root",
-    "body": "<${1:root}>\n    $0\n</$1>",
-    "description": "XML root element"
+  "LinearLayout": {
+    "prefix": "linear",
+    "body": [
+      "<LinearLayout xmlns:android=\"http://schemas.android.com/apk/res/android\"",
+      "\tandroid:layout_width=\"match_parent\"",
+      "\tandroid:layout_height=\"match_parent\"",
+      "\tandroid:orientation=\"vertical\">",
+      "\t$0",
+      "</LinearLayout>"
+    ],
+    "description": "LinearLayout"
   },
-  "item": {
-    "prefix": "item",
-    "body": "<${1:item} ${2:name}=\"${3:value}\" />",
-    "description": "XML element"
+  "TextView": {
+    "prefix": "tv",
+    "body": [
+      "<TextView",
+      "\tandroid:layout_width=\"wrap_content\"",
+      "\tandroid:layout_height=\"wrap_content\"",
+      "\tandroid:text=\"$1\" />"
+    ],
+    "description": "TextView"
+  },
+  "Button": {
+    "prefix": "btn",
+    "body": [
+      "<Button",
+      "\tandroid:id=\"@+id/${1:button}\"",
+      "\tandroid:layout_width=\"wrap_content\"",
+      "\tandroid:layout_height=\"wrap_content\"",
+      "\tandroid:text=\"$2\" />"
+    ],
+    "description": "Button"
+  },
+  "Activity (manifest)": {
+    "prefix": "act",
+    "body": [
+      "<activity",
+      "\tandroid:name=\".${1:MainActivity}\"",
+      "\tandroid:exported=\"${2:false}\" />"
+    ],
+    "description": "<activity>"
+  },
+  "Permission": {
+    "prefix": "perm",
+    "body": [
+      "<uses-permission android:name=\"android.permission.${1:INTERNET}\" />"
+    ],
+    "description": "uses-permission"
+  },
+  "String": {
+    "prefix": "str",
+    "body": [
+      "<string name=\"${1:name}\">$2</string>"
+    ],
+    "description": "string resource"
   }
 }

@@ -1,12 +1,52 @@
 {
+  "dependencies": {
+    "prefix": "deps",
+    "body": [
+      "dependencies {",
+      "\timplementation(\"${1:group:artifact:version}\")$0",
+      "}"
+    ],
+    "description": "dependencies"
+  },
   "plugins": {
     "prefix": "plugins",
-    "body": "plugins {\n    id \"${1:java}\"\n}",
-    "description": "Gradle plugins"
+    "body": [
+      "plugins {",
+      "\tid(\"${1:com.android.application}\")$0",
+      "}"
+    ],
+    "description": "plugins"
   },
-  "dependencies": {
-    "prefix": "dependencies",
-    "body": "dependencies {\n    implementation(\"${1:group:artifact:version}\")\n}",
-    "description": "Gradle dependencies"
+  "repositories": {
+    "prefix": "repos",
+    "body": [
+      "repositories {",
+      "\tgoogle()",
+      "\tmavenCentral()",
+      "}"
+    ],
+    "description": "repositories"
+  },
+  "android": {
+    "prefix": "android",
+    "body": [
+      "android {",
+      "\tnamespace = \"${1:com.example.app}\"",
+      "\tcompileSdk = ${2:35}",
+      "\t$0",
+      "}"
+    ],
+    "description": "android block"
+  },
+  "task": {
+    "prefix": "task",
+    "body": [
+      "tasks.register(\"${1:name}\") {",
+      "\tdoLast {",
+      "\t\t$0",
+      "\t}",
+      "}"
+    ],
+    "description": "task"
   }
 }
