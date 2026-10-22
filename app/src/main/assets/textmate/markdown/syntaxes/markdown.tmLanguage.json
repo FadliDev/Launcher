@@ -3,6 +3,11 @@
   "name": "Markdown",
   "patterns": [
     {
+      "name": "comment.block",
+      "begin": "<!--",
+      "end": "-->"
+    },
+    {
       "name": "markup.heading",
       "match": "^#{1,6}\\s.*$"
     },
@@ -24,21 +29,44 @@
       "match": "\\*[^*\\s][^*\\n]*\\*|\\b_[^_\\s][^_\\n]*_\\b"
     },
     {
-      "name": "markup.underline.link",
-      "match": "\\[[^\\]\\n]*\\]\\([^)\\n]*\\)"
+      "match": "(!?\\[)([^\\]\\n]*)(\\])(\\()([^)\\n]*)(\\))",
+      "captures": {
+        "1": {
+          "name": "punctuation.definition.tag"
+        },
+        "2": {
+          "name": "markup.link.text"
+        },
+        "3": {
+          "name": "punctuation.definition.tag"
+        },
+        "4": {
+          "name": "punctuation.definition.tag"
+        },
+        "5": {
+          "name": "markup.underline.link"
+        },
+        "6": {
+          "name": "punctuation.definition.tag"
+        }
+      }
     },
     {
       "name": "markup.quote",
       "match": "^\\s*>.*$"
     },
     {
-      "name": "punctuation.definition.list",
-      "match": "^\\s*(?:[-*+]|\\d+\\.)\\s"
+      "name": "markup.separator",
+      "match": "^\\s*(?:-{3,}|\\*{3,}|_{3,})\\s*$"
     },
     {
-      "name": "comment.block",
-      "begin": "<!--",
-      "end": "-->"
+      "match": "^\\s*(?:[-*+]|\\d+\\.)\\s(\\[[ xX]\\]\\s)?",
+      "name": "punctuation.definition.list",
+      "captures": {
+        "1": {
+          "name": "constant.language"
+        }
+      }
     }
   ]
 }

@@ -11,6 +11,10 @@
       "match": "^\\s*[^=:#!\\s][^=:\\s]*(?=\\s*[=:])"
     },
     {
+      "name": "keyword.operator",
+      "match": "[=:]"
+    },
+    {
       "name": "constant.numeric",
       "match": "\\b(?:0[xX][0-9a-fA-F_]+|0[bB][01_]+|\\d[\\d_]*(?:\\.\\d+)?(?:[eE][+-]?\\d+)?[fFLlDdUu]*)\\b"
     }

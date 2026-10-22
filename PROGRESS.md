@@ -5,7 +5,7 @@ File ini dicatat ulang **setiap ada update**. Entri terbaru di atas (bagian *Log
 Legenda: ✅ terverifikasi di perangkat · 🟡 kode ditulis, belum dikompilasi/diuji · ⬜ belum dikerjakan
 
 ## Status saat ini
-**Versi:** v0.2.0 (UI dirombak + Fase 2) · **Status build:** 🟡 v0.2.0 ditulis tanpa kompilator (sandbox tidak bisa unduh Android SDK/dependensi). Crash startup dari v0.1.3 (tm4e/Java 11 API) **belum terbukti beres** — butuh uji di perangkat
+**Versi:** v0.2.1 (tema biru MD3 + syntax highlight baru, di atas v0.2.0) · **Status build:** 🟡 v0.2.0 ditulis tanpa kompilator (sandbox tidak bisa unduh Android SDK/dependensi). Crash startup dari v0.1.3 (tm4e/Java 11 API) **belum terbukti beres** — butuh uji di perangkat
 
 | Fase | Isi | Status |
 |---|---|---|
@@ -82,6 +82,12 @@ Kode ditulis dari pengetahuan API Sora-editor 0.23.x tanpa bisa dikompilasi. Tit
 3. Kalau stabil → rilis `v0.1` lalu lanjut sesuai urutan cepat ROADMAP: **Fase 0 spike → Fase 3 → Fase 4** (build di HP)
 
 ## Log perubahan
+### 2026-10-22 — v0.2.1 (aksen biru + syntax highlight MD3)
+- **UI semua biru:** `Theme.kt` memakai skema MD3 statis (primary/secondary/tertiary/container/netral bernuansa biru, seed ~#0B57D0) untuk Terang/Gelap/AMOLED. **Warna dinamis (Material You) dihapus** (toggle di Setelan, `Prefs.dynamicColor`, `setDynamic`) karena menimpa aksen dengan warna wallpaper. Ikon file di explorer jadi keluarga biru; ikon launcher biru.
+- **Tema syntax baru** (`Sally Dark / AMOLED / Light`, dihasilkan `tools/gen_assets.py`): latar = token surface MD3 yang sama dengan app; keyword = primary biru, tipe = cyan, fungsi = kuning pucat, string = mint, angka = oranye lembut, konstanta = lavender, anotasi = pink lembut, komentar = outline (italic). Kontras ≥ 4.5:1.
+- **Grammar lebih kaya:** operator, deklarasi `fun`/`class`/`object`, modifier dibedakan dari keyword kontrol, `import`/`package` (namespace), properti `.nama`, konstanta UPPER_CASE, string template Kotlin/Gradle (`$x`, `${...}`), preprocessor C++, namespace atribut XML (`android:`) + referensi `@+id/…`, link/checklist/hr Markdown.
+- **Chrome editor** (`EditorRuntime.applyChrome`): kursor, handle seleksi, scrollbar, garis blok, gutter, highlight pencarian ikut palet biru.
+- ⚠️ Belum dikompilasi/diuji. Titik rawan baru: konstanta `EditorColorScheme.*` di `applyChrome` (kalau ada yang tidak ditemukan di Sora 0.23.4, hapus barisnya). Grammar baru belum dijalankan lewat tm4e — kalau ada token aneh/regex ditolak, kirim contoh kodenya.
 ### 2026-10-22 — v0.2.0 (rombak UI + Fase 2)
 - UI baru, MD3 tetap (dynamic color, light/dark/AMOLED), lebih ringan: Beranda proyek (daftar, FAB proyek baru, impor zip), Editor (top bar ringkas, tab berikon, key row dengan Undo/Redo), explorer berikon, overlay pencarian
 - Fase 2: lihat tabel rincian di atas

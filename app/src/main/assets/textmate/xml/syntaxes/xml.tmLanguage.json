@@ -18,7 +18,7 @@
       "end": "\\?>"
     },
     {
-      "begin": "(</?)([A-Za-z_][\\w:.-]*)",
+      "begin": "(</?)([A-Za-z_][\\w.-]*)(?:(:)([A-Za-z_][\\w.-]*))?",
       "end": "/?>",
       "beginCaptures": {
         "1": {
@@ -26,22 +26,61 @@
         },
         "2": {
           "name": "entity.name.tag"
+        },
+        "3": {
+          "name": "punctuation.definition.tag"
+        },
+        "4": {
+          "name": "entity.name.tag"
+        }
+      },
+      "endCaptures": {
+        "0": {
+          "name": "punctuation.definition.tag"
         }
       },
       "patterns": [
         {
+          "name": "entity.other.attribute-name.namespace",
+          "match": "[A-Za-z_][\\w.-]*(?=:[\\w.-]+\\s*=)"
+        },
+        {
+          "name": "punctuation.definition.tag",
+          "match": ":(?=[\\w.-]+\\s*=)"
+        },
+        {
           "name": "entity.other.attribute-name",
-          "match": "[A-Za-z_:][\\w:.-]*(?=\\s*=)"
+          "match": "[A-Za-z_][\\w.-]*(?=\\s*=)"
+        },
+        {
+          "name": "keyword.operator",
+          "match": "="
         },
         {
           "name": "string.quoted.double",
           "begin": "\"",
-          "end": "\""
+          "end": "\"",
+          "patterns": [
+            {
+              "name": "constant.other.reference",
+              "match": "[@?]\\+?(?:[A-Za-z_.]+:)?[A-Za-z_]+/[\\w.]+"
+            },
+            {
+              "name": "constant.character.entity",
+              "match": "&\\w+;"
+            }
+          ]
         },
         {
           "name": "string.quoted.single",
           "begin": "'",
-          "end": "'"
+          "end": "'",
+          "patterns": [
+            {
+              "name": "constant.other.reference",
+              "match": "[@?]\\+?(?:[A-Za-z_.]+:)?[A-Za-z_]+/[\\w.]+"
+            }
+          ]
         }
       ]
     },

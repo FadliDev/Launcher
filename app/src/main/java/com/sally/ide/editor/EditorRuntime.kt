@@ -44,8 +44,27 @@ object EditorRuntime {
 
     fun colorScheme(theme: String): EditorColorScheme = if (safe) EditorColorScheme() else runCatching {
         ThemeRegistry.getInstance().setTheme(theme)
-        TextMateColorScheme.create(ThemeRegistry.getInstance()) as EditorColorScheme
+        (TextMateColorScheme.create(ThemeRegistry.getInstance()) as EditorColorScheme).also { applyChrome(it, theme) }
     }.getOrElse { EditorColorScheme() }
+
+    /** Warna "chrome" editor (gutter, handle, scrollbar, pencarian) disamakan dengan token MD3 biru di ui/Theme.kt. */
+    private fun applyChrome(s: EditorColorScheme, theme: String) {
+        val light = theme == "light"
+        val bg = when (theme) { "amoled" -> 0xFF000000; "light" -> 0xFFF9F9FF; else -> 0xFF111318 }.toInt()
+        val primary = if (light) 0xFF0B57D0.toInt() else 0xFFADC6FF.toInt()
+        val outlineVar = if (light) 0xFFC4C6D0.toInt() else 0xFF44474E.toInt()
+        val thumb = if (light) 0x660B57D0 else 0x66ADC6FF
+        val match = if (light) 0xFFFFE08A.toInt() else 0xFF5C4A00.toInt()
+        s.setColor(EditorColorScheme.LINE_NUMBER_BACKGROUND, bg)
+        s.setColor(EditorColorScheme.LINE_DIVIDER, outlineVar)
+        s.setColor(EditorColorScheme.SELECTION_INSERT, primary)
+        s.setColor(EditorColorScheme.SELECTION_HANDLE, primary)
+        s.setColor(EditorColorScheme.SCROLL_BAR_THUMB, thumb.toInt())
+        s.setColor(EditorColorScheme.SCROLL_BAR_THUMB_PRESSED, primary)
+        s.setColor(EditorColorScheme.MATCHED_TEXT_BACKGROUND, match)
+        s.setColor(EditorColorScheme.BLOCK_LINE, outlineVar)
+        s.setColor(EditorColorScheme.BLOCK_LINE_CURRENT, primary)
+    }
 
     fun language(lang: Lang): Language {
         val scope = lang.scope ?: return EmptyLanguage()

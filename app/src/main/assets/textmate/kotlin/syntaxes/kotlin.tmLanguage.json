@@ -5,7 +5,52 @@
     {
       "name": "string.quoted.triple",
       "begin": "\"\"\"",
-      "end": "\"\"\""
+      "end": "\"\"\"",
+      "patterns": [
+        {
+          "name": "variable.other.interpolation",
+          "match": "\\$[A-Za-z_]\\w*"
+        },
+        {
+          "name": "meta.template",
+          "begin": "\\$\\{",
+          "end": "\\}",
+          "beginCaptures": {
+            "0": {
+              "name": "keyword.declaration"
+            }
+          },
+          "endCaptures": {
+            "0": {
+              "name": "keyword.declaration"
+            }
+          },
+          "patterns": [
+            {
+              "include": "$self"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "match": "\\b(fun)\\s+(?:<[^>]*>\\s*)?(?:[\\w.]+\\.)?([A-Za-z_]\\w*)",
+      "captures": {
+        "1": {
+          "name": "keyword.declaration"
+        },
+        "2": {
+          "name": "entity.name.function"
+        }
+      }
+    },
+    {
+      "match": "\\b(val|var)\\b",
+      "name": "keyword.declaration"
+    },
+    {
+      "name": "entity.name.label",
+      "match": "\\b[A-Za-z_]\\w*@"
     },
     {
       "name": "comment.block",
@@ -23,7 +68,31 @@
       "patterns": [
         {
           "name": "constant.character.escape",
-          "match": "\\\\."
+          "match": "\\\\(?:u[0-9a-fA-F]{4}|.)"
+        },
+        {
+          "name": "variable.other.interpolation",
+          "match": "\\$[A-Za-z_]\\w*"
+        },
+        {
+          "name": "meta.template",
+          "begin": "\\$\\{",
+          "end": "\\}",
+          "beginCaptures": {
+            "0": {
+              "name": "keyword.declaration"
+            }
+          },
+          "endCaptures": {
+            "0": {
+              "name": "keyword.declaration"
+            }
+          },
+          "patterns": [
+            {
+              "include": "$self"
+            }
+          ]
         }
       ]
     },
@@ -34,7 +103,7 @@
       "patterns": [
         {
           "name": "constant.character.escape",
-          "match": "\\\\."
+          "match": "\\\\(?:u[0-9a-fA-F]{4}|.)"
         }
       ]
     },
@@ -47,24 +116,62 @@
       "match": "@[A-Za-z_][\\w.]*"
     },
     {
-      "name": "keyword.control",
-      "match": "\\b(?:as|break|by|catch|class|companion|constructor|continue|crossinline|data|do|dynamic|else|enum|external|fun|get|if|import|in|infix|init|inline|inner|interface|internal|is|it|lateinit|noinline|object|open|operator|out|override|package|private|protected|public|reified|return|sealed|set|super|suspend|tailrec|this|throw|try|typealias|val|var|vararg|when|where|while|abstract|final|annotation|const|field|value)\\b"
+      "match": "^\\s*(import|package)\\s+([\\w.*]+)",
+      "captures": {
+        "1": {
+          "name": "keyword.declaration"
+        },
+        "2": {
+          "name": "entity.name.namespace"
+        }
+      }
     },
     {
-      "name": "storage.type",
+      "match": "\\b(enum class|annotation class|class|interface|object|typealias)\\s+([A-Za-z_]\\w*)",
+      "captures": {
+        "1": {
+          "name": "keyword.declaration"
+        },
+        "2": {
+          "name": "entity.name.type"
+        }
+      }
+    },
+    {
+      "name": "keyword.control",
+      "match": "\\b(?:as|break|by|catch|continue|do|else|finally|for|if|in|is|return|throw|try|when|while)\\b"
+    },
+    {
+      "name": "storage.modifier",
+      "match": "\\b(?:abstract|annotation|companion|const|crossinline|data|external|final|infix|inline|inner|internal|lateinit|noinline|open|operator|out|override|private|protected|public|reified|sealed|suspend|tailrec|vararg)\\b"
+    },
+    {
+      "name": "storage.type.primitive",
       "match": "\\b(?:Int|Long|Short|Byte|Float|Double|Boolean|Char|String|Unit|Any|Nothing|Array|List|Map|Set)\\b"
     },
     {
       "name": "constant.language",
-      "match": "\\b(?:true|false|null)\\b"
+      "match": "\\b(?:true|false|null|this|super)\\b"
+    },
+    {
+      "name": "entity.name.function",
+      "match": "\\b[A-Za-z_][A-Za-z0-9_]*(?=\\s*\\()"
+    },
+    {
+      "name": "variable.other.property",
+      "match": "(?<=\\.)[A-Za-z_][A-Za-z0-9_]*\\b(?!\\s*\\()"
+    },
+    {
+      "name": "constant.other",
+      "match": "\\b[A-Z][A-Z0-9_]{2,}\\b"
     },
     {
       "name": "entity.name.type",
       "match": "\\b[A-Z][A-Za-z0-9_]*\\b"
     },
     {
-      "name": "entity.name.function",
-      "match": "\\b[A-Za-z_][A-Za-z0-9_]*(?=\\s*\\()"
+      "name": "keyword.operator",
+      "match": "[-+*/%=<>!&|^~?:]+"
     }
   ]
 }

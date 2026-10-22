@@ -63,7 +63,7 @@ fun SnippetSheet(snippets: List<Snippet>, langLabel: String, onPick: (Snippet) -
 @Composable
 fun SettingsSheet(
     prefs: Prefs,
-    onTheme: (ThemeMode) -> Unit, onDynamic: (Boolean) -> Unit, onFont: (Float) -> Unit,
+    onTheme: (ThemeMode) -> Unit, onFont: (Float) -> Unit,
     onWrap: (Boolean) -> Unit, onLines: (Boolean) -> Unit, onTab: (Int) -> Unit, onDismiss: () -> Unit,
 ) {
     ModalBottomSheet(onDismissRequest = onDismiss) {
@@ -75,7 +75,6 @@ fun SettingsSheet(
                     FilterChip(selected = prefs.themeMode == m, onClick = { onTheme(m) }, label = { Text(m.label) })
                 }
             }
-            SwitchRow("Warna dinamis (Material You)", prefs.dynamicColor, onDynamic)
             Text("Ukuran font editor: ${prefs.fontSize.toInt()} sp", Modifier.padding(top = 8.dp), style = MaterialTheme.typography.labelLarge)
             Slider(value = prefs.fontSize, onValueChange = { onFont(it.toInt().toFloat()) }, valueRange = 10f..24f, steps = 13)
             SwitchRow("Word wrap", prefs.wordWrap, onWrap)

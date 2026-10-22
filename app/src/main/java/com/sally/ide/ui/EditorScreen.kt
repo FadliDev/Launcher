@@ -240,7 +240,7 @@ fun EditorScreen(vm: IdeViewModel, project: File, snackbar: SnackbarHostState) {
         }, onDismiss = { showSnippets = false })
     }
     if (showSettings) {
-        SettingsSheet(prefs, vm::setThemeMode, vm::setDynamic, vm::setFontSize, vm::setWordWrap, vm::setLineNumbers, vm::setTabSize) { showSettings = false }
+        SettingsSheet(prefs, vm::setThemeMode, vm::setFontSize, vm::setWordWrap, vm::setLineNumbers, vm::setTabSize) { showSettings = false }
     }
     if (showGoto) {
         TextInputDialog("Ke baris", "Nomor baris", numeric = true, onConfirm = { s ->

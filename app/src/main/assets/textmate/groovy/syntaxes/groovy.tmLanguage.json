@@ -5,7 +5,33 @@
     {
       "name": "string.quoted.triple",
       "begin": "'''|\"\"\"",
-      "end": "'''|\"\"\""
+      "end": "'''|\"\"\"",
+      "patterns": [
+        {
+          "name": "variable.other.interpolation",
+          "match": "\\$[A-Za-z_]\\w*"
+        },
+        {
+          "name": "meta.template",
+          "begin": "\\$\\{",
+          "end": "\\}",
+          "beginCaptures": {
+            "0": {
+              "name": "keyword.declaration"
+            }
+          },
+          "endCaptures": {
+            "0": {
+              "name": "keyword.declaration"
+            }
+          },
+          "patterns": [
+            {
+              "include": "$self"
+            }
+          ]
+        }
+      ]
     },
     {
       "name": "comment.block",
@@ -23,7 +49,31 @@
       "patterns": [
         {
           "name": "constant.character.escape",
-          "match": "\\\\."
+          "match": "\\\\(?:u[0-9a-fA-F]{4}|.)"
+        },
+        {
+          "name": "variable.other.interpolation",
+          "match": "\\$[A-Za-z_]\\w*"
+        },
+        {
+          "name": "meta.template",
+          "begin": "\\$\\{",
+          "end": "\\}",
+          "beginCaptures": {
+            "0": {
+              "name": "keyword.declaration"
+            }
+          },
+          "endCaptures": {
+            "0": {
+              "name": "keyword.declaration"
+            }
+          },
+          "patterns": [
+            {
+              "include": "$self"
+            }
+          ]
         }
       ]
     },
@@ -34,7 +84,7 @@
       "patterns": [
         {
           "name": "constant.character.escape",
-          "match": "\\\\."
+          "match": "\\\\(?:u[0-9a-fA-F]{4}|.)"
         }
       ]
     },
@@ -47,28 +97,70 @@
       "match": "@[A-Za-z_][\\w.]*"
     },
     {
-      "name": "keyword.control",
-      "match": "\\b(?:as|assert|break|case|catch|class|continue|def|default|else|enum|extends|final|finally|for|if|implements|import|in|instanceof|interface|new|package|private|protected|public|return|static|super|switch|this|throw|throws|try|while)\\b"
+      "match": "^\\s*(import|package)\\s+([\\w.*]+)",
+      "captures": {
+        "1": {
+          "name": "keyword.declaration"
+        },
+        "2": {
+          "name": "entity.name.namespace"
+        }
+      }
     },
     {
-      "name": "storage.type",
+      "match": "\\b(class|interface|enum|extends|implements|new)\\s+([A-Za-z_]\\w*)",
+      "captures": {
+        "1": {
+          "name": "keyword.declaration"
+        },
+        "2": {
+          "name": "entity.name.type"
+        }
+      }
+    },
+    {
+      "name": "keyword.control",
+      "match": "\\b(?:as|assert|break|case|catch|continue|def|default|else|finally|for|if|in|instanceof|return|switch|throw|try|while)\\b"
+    },
+    {
+      "name": "storage.modifier",
+      "match": "\\b(?:abstract|final|private|protected|public|static)\\b"
+    },
+    {
+      "name": "storage.type.primitive",
       "match": "\\b(?:String|Integer|Boolean|List|Map)\\b"
     },
     {
       "name": "constant.language",
-      "match": "\\b(?:true|false|null)\\b"
+      "match": "\\b(?:true|false|null|this|super)\\b"
     },
     {
       "name": "support.function",
       "match": "\\b(?:plugins|dependencies|android|repositories|apply|implementation|api|compileOnly|runtimeOnly|testImplementation|androidTestImplementation|kapt|ksp|id|version|buildscript|allprojects|subprojects|task|tasks|ext|include|pluginManagement)\\b"
     },
     {
-      "name": "entity.name.type",
-      "match": "\\b[A-Z][A-Za-z0-9_]*\\b"
+      "name": "entity.name.function",
+      "match": "\\b[A-Za-z_]\\w*(?=\\s*\\{)"
     },
     {
       "name": "entity.name.function",
       "match": "\\b[A-Za-z_][A-Za-z0-9_]*(?=\\s*\\()"
+    },
+    {
+      "name": "variable.other.property",
+      "match": "(?<=\\.)[A-Za-z_][A-Za-z0-9_]*\\b(?!\\s*\\()"
+    },
+    {
+      "name": "constant.other",
+      "match": "\\b[A-Z][A-Z0-9_]{2,}\\b"
+    },
+    {
+      "name": "entity.name.type",
+      "match": "\\b[A-Z][A-Za-z0-9_]*\\b"
+    },
+    {
+      "name": "keyword.operator",
+      "match": "[-+*/%=<>!&|^~?:]+"
     }
   ]
 }

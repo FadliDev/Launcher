@@ -18,7 +18,6 @@ enum class ThemeMode(val label: String) { SYSTEM("Ikuti sistem"), LIGHT("Terang"
 
 data class Prefs(
     val themeMode: ThemeMode = ThemeMode.SYSTEM,
-    val dynamicColor: Boolean = true,
     val fontSize: Float = 14f,
     val wordWrap: Boolean = false,
     val lineNumbers: Boolean = true,
@@ -30,7 +29,6 @@ data class Session(val paths: List<String>, val active: Int)
 
 object Keys {
     val THEME = stringPreferencesKey("theme_mode")
-    val DYNAMIC = booleanPreferencesKey("dynamic_color")
     val FONT = floatPreferencesKey("font_size")
     val WRAP = booleanPreferencesKey("word_wrap")
     val LINES = booleanPreferencesKey("line_numbers")
@@ -41,7 +39,6 @@ class SettingsRepo(private val ctx: Context) {
     val flow: Flow<Prefs> = ctx.store.data.map { p ->
         Prefs(
             themeMode = p[Keys.THEME]?.let { runCatching { ThemeMode.valueOf(it) }.getOrNull() } ?: ThemeMode.SYSTEM,
-            dynamicColor = p[Keys.DYNAMIC] ?: true,
             fontSize = (p[Keys.FONT] ?: 14f).coerceIn(10f, 24f),
             wordWrap = p[Keys.WRAP] ?: false,
             lineNumbers = p[Keys.LINES] ?: true,

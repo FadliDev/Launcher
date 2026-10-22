@@ -374,7 +374,6 @@ class IdeViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch { repo.edit(block) }
     }
     fun setThemeMode(m: ThemeMode) = edit { it[Keys.THEME] = m.name }
-    fun setDynamic(v: Boolean) = edit { it[Keys.DYNAMIC] = v }
     fun setFontSize(v: Float) = edit { it[Keys.FONT] = v }
     fun setWordWrap(v: Boolean) = edit { it[Keys.WRAP] = v }
     fun setLineNumbers(v: Boolean) = edit { it[Keys.LINES] = v }

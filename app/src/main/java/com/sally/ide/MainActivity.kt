@@ -23,7 +23,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             val prefs by vm.prefs.collectAsStateWithLifecycle()
             var crash by remember { mutableStateOf(CrashLog.read(this)) }
-            SallyTheme(prefs.themeMode, prefs.dynamicColor) {
+            SallyTheme(prefs.themeMode) {
                 val c = crash
                 if (c != null) {
                     CrashScreen(

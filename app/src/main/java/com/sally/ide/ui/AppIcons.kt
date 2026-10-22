@@ -81,7 +81,7 @@ object Ic {
     val Zip: ImageVector = Icons.Outlined.FolderZip
 }
 
-/** Ikon + warna aksen per tipe file. [tint] = Unspecified berarti pakai warna default tema. */
+/** Ikon + warna aksen per tipe file (semua dalam keluarga biru, sesuai tema MD3 biru). [tint] = Unspecified berarti pakai warna default tema. */
 class FileVisual(val icon: ImageVector, val tint: Color = Color.Unspecified) {
     fun tintOr(default: Color): Color = if (tint == Color.Unspecified) default else tint
 }
@@ -89,22 +89,22 @@ class FileVisual(val icon: ImageVector, val tint: Color = Color.Unspecified) {
 fun fileVisual(name: String): FileVisual {
     val n = name.lowercase()
     return when {
-        n.endsWith(".kt") -> FileVisual(Ic.Code, Color(0xFF9B7BEA))
-        n.endsWith(".kts") || n.endsWith(".gradle") -> FileVisual(Ic.Build, Color(0xFF3FB6A8))
-        n.endsWith(".java") -> FileVisual(Ic.Code, Color(0xFFE8833A))
+        n.endsWith(".kt") -> FileVisual(Ic.Code, Color(0xFF6C8FF5))
+        n.endsWith(".kts") || n.endsWith(".gradle") -> FileVisual(Ic.Build, Color(0xFF3FA9E0))
+        n.endsWith(".java") -> FileVisual(Ic.Code, Color(0xFF4F8EF7))
         n.endsWith(".c") || n.endsWith(".cc") || n.endsWith(".cpp") || n.endsWith(".cxx") ||
-            n.endsWith(".h") || n.endsWith(".hpp") -> FileVisual(Ic.Code, Color(0xFF4C8DDB))
-        n.endsWith(".xml") || n.endsWith(".html") -> FileVisual(Ic.Code, Color(0xFF5BAE5B))
-        n.endsWith(".json") || n.endsWith(".mcmeta") -> FileVisual(Ic.Json, Color(0xFFD4B13A))
+            n.endsWith(".h") || n.endsWith(".hpp") -> FileVisual(Ic.Code, Color(0xFF2F6FE0))
+        n.endsWith(".xml") || n.endsWith(".html") -> FileVisual(Ic.Code, Color(0xFF5AA9F0))
+        n.endsWith(".json") || n.endsWith(".mcmeta") -> FileVisual(Ic.Json, Color(0xFF7FB2FF))
         n.endsWith(".toml") || n.endsWith(".properties") || n.endsWith(".yml") || n.endsWith(".yaml") ->
-            FileVisual(Ic.Settings, Color(0xFF8A94A6))
-        n.endsWith(".md") || n.endsWith(".markdown") -> FileVisual(Ic.File, Color(0xFF5C9DD6))
+            FileVisual(Ic.Settings, Color(0xFF8EA2C4))
+        n.endsWith(".md") || n.endsWith(".markdown") -> FileVisual(Ic.File, Color(0xFF4C9BE8))
         n.endsWith(".png") || n.endsWith(".jpg") || n.endsWith(".jpeg") || n.endsWith(".webp") || n.endsWith(".gif") ->
-            FileVisual(Ic.Image, Color(0xFFD16B9A))
-        n.endsWith(".zip") || n.endsWith(".jar") || n.endsWith(".aar") -> FileVisual(Ic.Zip, Color(0xFFB08968))
-        n.endsWith(".apk") -> FileVisual(Ic.Android, Color(0xFF3DDC84))
+            FileVisual(Ic.Image, Color(0xFF8E9CF2))
+        n.endsWith(".zip") || n.endsWith(".jar") || n.endsWith(".aar") -> FileVisual(Ic.Zip, Color(0xFF6E8BC4))
+        n.endsWith(".apk") -> FileVisual(Ic.Android, Color(0xFF2CB1D6))
         n.endsWith(".so") || n.endsWith(".dll") || n.endsWith(".bin") -> FileVisual(Ic.Chip)
-        n.endsWith(".sh") -> FileVisual(Ic.Terminal, Color(0xFF8A94A6))
+        n.endsWith(".sh") -> FileVisual(Ic.Terminal, Color(0xFF8EA2C4))
         else -> FileVisual(Ic.File)
     }
 }

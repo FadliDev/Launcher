@@ -92,7 +92,7 @@ fun HomeScreen(vm: IdeViewModel, snackbar: SnackbarHostState) {
 
     if (showNew) NewProjectDialog(onCreate = { n, t -> showNew = false; vm.createProject(n, t) }, onDismiss = { showNew = false })
     if (showSettings) {
-        SettingsSheet(prefs, vm::setThemeMode, vm::setDynamic, vm::setFontSize, vm::setWordWrap, vm::setLineNumbers, vm::setTabSize) { showSettings = false }
+        SettingsSheet(prefs, vm::setThemeMode, vm::setFontSize, vm::setWordWrap, vm::setLineNumbers, vm::setTabSize) { showSettings = false }
     }
     deleting?.let { p ->
         ConfirmDialog(

@@ -18,7 +18,7 @@
       "patterns": [
         {
           "name": "constant.character.escape",
-          "match": "\\\\."
+          "match": "\\\\(?:u[0-9a-fA-F]{4}|.)"
         }
       ]
     },
@@ -29,7 +29,7 @@
       "patterns": [
         {
           "name": "constant.character.escape",
-          "match": "\\\\."
+          "match": "\\\\(?:u[0-9a-fA-F]{4}|.)"
         }
       ]
     },
@@ -42,24 +42,62 @@
       "match": "@[A-Za-z_][\\w.]*"
     },
     {
-      "name": "keyword.control",
-      "match": "\\b(?:abstract|assert|break|case|catch|class|continue|default|do|else|enum|extends|final|finally|for|if|implements|import|instanceof|interface|native|new|package|private|protected|public|return|static|strictfp|super|switch|synchronized|this|throw|throws|transient|try|volatile|while|var|record|sealed|permits|yield)\\b"
+      "match": "^\\s*(import|package)\\s+([\\w.*]+)",
+      "captures": {
+        "1": {
+          "name": "keyword.declaration"
+        },
+        "2": {
+          "name": "entity.name.namespace"
+        }
+      }
     },
     {
-      "name": "storage.type",
-      "match": "\\b(?:boolean|byte|char|double|float|int|long|short|void|String|Object)\\b"
+      "match": "\\b(class|interface|enum|record|extends|implements|new)\\s+([A-Za-z_]\\w*)",
+      "captures": {
+        "1": {
+          "name": "keyword.declaration"
+        },
+        "2": {
+          "name": "entity.name.type"
+        }
+      }
+    },
+    {
+      "name": "keyword.control",
+      "match": "\\b(?:assert|break|case|catch|continue|default|do|else|finally|for|if|instanceof|return|switch|throw|throws|try|while|yield)\\b"
+    },
+    {
+      "name": "storage.modifier",
+      "match": "\\b(?:abstract|final|native|private|protected|public|static|strictfp|synchronized|transient|volatile|sealed|non-sealed|permits)\\b"
+    },
+    {
+      "name": "storage.type.primitive",
+      "match": "\\b(?:boolean|byte|char|double|float|int|long|short|void|var|String|Object)\\b"
     },
     {
       "name": "constant.language",
-      "match": "\\b(?:true|false|null)\\b"
+      "match": "\\b(?:true|false|null|this|super)\\b"
+    },
+    {
+      "name": "entity.name.function",
+      "match": "\\b[A-Za-z_][A-Za-z0-9_]*(?=\\s*\\()"
+    },
+    {
+      "name": "variable.other.property",
+      "match": "(?<=\\.)[A-Za-z_][A-Za-z0-9_]*\\b(?!\\s*\\()"
+    },
+    {
+      "name": "constant.other",
+      "match": "\\b[A-Z][A-Z0-9_]{2,}\\b"
     },
     {
       "name": "entity.name.type",
       "match": "\\b[A-Z][A-Za-z0-9_]*\\b"
     },
     {
-      "name": "entity.name.function",
-      "match": "\\b[A-Za-z_][A-Za-z0-9_]*(?=\\s*\\()"
+      "name": "keyword.operator",
+      "match": "[-+*/%=<>!&|^~?:]+"
     }
   ]
 }
