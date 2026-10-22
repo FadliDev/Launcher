@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "id": "{{modId}}",
+  "version": "${version}",
+  "name": "{{modName}}",
+  "description": "{{description}}",
+  "authors": ["{{author}}"],
+  "license": "MIT",
+  "environment": "*",
+  "entrypoints": { "main": ["{{package}}.{{className}}"] },
+  "depends": {
+    "fabricloader": ">=0.15.0",
+    "minecraft": "~{{mcVersion}}",
+    "java": ">={{java}}",
+    "fabric-api": "*"
+  }
+}

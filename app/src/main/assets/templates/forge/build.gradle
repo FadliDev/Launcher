@@ -1,0 +1,24 @@
+plugins {
+    id 'net.minecraftforge.gradle' version '{{pluginVersion}}'
+}
+version = '{{modVersion}}'
+group = '{{package}}'
+base { archivesName = '{{modId}}' }
+java.toolchain.languageVersion = JavaLanguageVersion.of({{java}})
+minecraft {
+    mappings channel: 'official', version: '{{mcVersion}}'
+    runs {
+        client {
+            workingDirectory project.file('run')
+            mods { "{{modId}}" { source sourceSets.main } }
+        }
+        server {
+            workingDirectory project.file('run')
+            mods { "{{modId}}" { source sourceSets.main } }
+        }
+    }
+}
+dependencies {
+    minecraft 'net.minecraftforge:forge:{{mcVersion}}-{{loaderVersion}}'
+}
+jar { manifest { attributes 'Implementation-Version': project.version } }
