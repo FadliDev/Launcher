@@ -14,7 +14,6 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.sally.modforge.build.BuildState
 import com.sally.modforge.model.Project
 import com.sally.modforge.script.NodeCatalog
 
@@ -98,7 +97,7 @@ fun BuildTab(vm: AppVm, p: Project) {
                 Text(s.message, color = MaterialTheme.colorScheme.error)
                 if (s.log.isNotBlank()) Text(s.log, fontFamily = FontFamily.Monospace, fontSize = 11.sp)
             }
-            BuildState.Idle -> {}
+            BuildState.Idle -> Unit
         }
     }
 }
