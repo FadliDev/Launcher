@@ -87,7 +87,8 @@ Kode ditulis dari pengetahuan API Sora-editor 0.23.x tanpa bisa dikompilasi. Tit
 - **Tema syntax baru** (`Sally Dark / AMOLED / Light`, dihasilkan `tools/gen_assets.py`): latar = token surface MD3 yang sama dengan app; keyword = primary biru, tipe = cyan, fungsi = kuning pucat, string = mint, angka = oranye lembut, konstanta = lavender, anotasi = pink lembut, komentar = outline (italic). Kontras ≥ 4.5:1.
 - **Grammar lebih kaya:** operator, deklarasi `fun`/`class`/`object`, modifier dibedakan dari keyword kontrol, `import`/`package` (namespace), properti `.nama`, konstanta UPPER_CASE, string template Kotlin/Gradle (`$x`, `${...}`), preprocessor C++, namespace atribut XML (`android:`) + referensi `@+id/…`, link/checklist/hr Markdown.
 - **Chrome editor** (`EditorRuntime.applyChrome`): kursor, handle seleksi, scrollbar, garis blok, gutter, highlight pencarian ikut palet biru.
-- ⚠️ Belum dikompilasi/diuji. Titik rawan baru: konstanta `EditorColorScheme.*` di `applyChrome` (kalau ada yang tidak ditemukan di Sora 0.23.4, hapus barisnya). Grammar baru belum dijalankan lewat tm4e — kalau ada token aneh/regex ditolak, kirim contoh kodenya.
+- Fix build CI: KDoc di Theme.kt berisi `themes/*.json` (`/*` membuka komentar bersarang Kotlin → "Unclosed comment"); sudah diganti.
+- ⚠️ Belum dikompilasi ulang. Titik rawan baru: konstanta `EditorColorScheme.*` di `applyChrome` (kalau ada yang tidak ditemukan di Sora 0.23.4, hapus barisnya). Grammar baru belum dijalankan lewat tm4e — kalau ada token aneh/regex ditolak, kirim contoh kodenya.
 ### 2026-10-22 — v0.2.0 (rombak UI + Fase 2)
 - UI baru, MD3 tetap (dynamic color, light/dark/AMOLED), lebih ringan: Beranda proyek (daftar, FAB proyek baru, impor zip), Editor (top bar ringkas, tab berikon, key row dengan Undo/Redo), explorer berikon, overlay pencarian
 - Fase 2: lihat tabel rincian di atas

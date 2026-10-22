@@ -19,7 +19,7 @@ fun isDark(mode: ThemeMode): Boolean = when (mode) {
 /**
  * Skema warna MD3 statis beraksen BIRU (seed ~#0B57D0). Seluruh token sengaja biru: primary, secondary, tertiary,
  * container, dan netral bernuansa biru. Warna dinamis (Material You) dihapus supaya aksen selalu biru.
- * Token latar editor (assets/textmate/themes/*.json) memakai nilai surface yang sama.
+ * Token latar editor (assets/textmate/themes/ (dark, amoled, light)) memakai nilai surface yang sama.
  */
 private val LightBlue = lightColorScheme(
     primary = Color(0xFF0B57D0), onPrimary = Color(0xFFFFFFFF),
