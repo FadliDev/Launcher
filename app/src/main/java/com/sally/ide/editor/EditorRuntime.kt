@@ -16,6 +16,9 @@ import org.eclipse.tm4e.core.registry.IThemeSource
 /** Inisialisasi TextMate (grammar + tema) sekali. Kalau gagal, editor tetap jalan tanpa highlight. */
 object EditorRuntime {
     private var ready = false
+    /** Mode aman: tanpa TextMate (tanpa highlight) — dipakai kalau highlight bikin crash. */
+    @Volatile var safe = false
+        private set
     var failure: String? = null
         private set
 
@@ -23,6 +26,7 @@ object EditorRuntime {
     fun init(context: Context) {
         if (ready) return
         ready = true
+        if (com.sally.ide.CrashLog.isSafe(context)) { safe = true; return }
         runCatching {
             val files = FileProviderRegistry.getInstance()
             files.addFileProvider(AssetsFileResolver(context.applicationContext.assets))
@@ -38,13 +42,14 @@ object EditorRuntime {
         }.onFailure { failure = it.message ?: it.javaClass.simpleName }
     }
 
-    fun colorScheme(theme: String): EditorColorScheme = runCatching {
+    fun colorScheme(theme: String): EditorColorScheme = if (safe) EditorColorScheme() else runCatching {
         ThemeRegistry.getInstance().setTheme(theme)
         TextMateColorScheme.create(ThemeRegistry.getInstance()) as EditorColorScheme
     }.getOrElse { EditorColorScheme() }
 
     fun language(lang: Lang): Language {
         val scope = lang.scope ?: return EmptyLanguage()
+        if (safe) return EmptyLanguage()
         // createIdentifiers=false: completion ditangani sendiri (Completion.kt) lewat suggestion bar.
         return runCatching { TextMateLanguage.create(scope, false) as Language }.getOrElse { EmptyLanguage() }
     }

@@ -30,7 +30,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import com.sally.ide.CrashLog
 import com.sally.ide.data.Prefs
 import com.sally.ide.data.ThemeMode
 import com.sally.ide.editor.Snippet
@@ -74,6 +76,9 @@ fun SettingsSheet(
             SwitchRow("Warna dinamis (Material You)", prefs.dynamicColor, onDynamic)
             Text("Ukuran font editor: ${prefs.fontSize.toInt()} sp", Modifier.padding(top = 8.dp), style = MaterialTheme.typography.labelLarge)
             Slider(value = prefs.fontSize, onValueChange = { onFont(it.toInt().toFloat()) }, valueRange = 10f..24f, steps = 13)
+            val ctx = LocalContext.current
+            var safe by remember { mutableStateOf(CrashLog.isSafe(ctx)) }
+            SwitchRow("Mode aman: tanpa highlight (mulai ulang app)", safe) { safe = it; CrashLog.setSafe(ctx, it) }
             SwitchRow("Word wrap", prefs.wordWrap, onWrap)
             SwitchRow("Nomor baris", prefs.lineNumbers, onLines)
             Text("Lebar tab: ${prefs.tabSize} spasi", Modifier.padding(top = 8.dp), style = MaterialTheme.typography.labelLarge)

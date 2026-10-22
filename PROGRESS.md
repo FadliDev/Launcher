@@ -5,7 +5,7 @@ File ini dicatat ulang **setiap ada update**. Entri terbaru di atas (bagian *Log
 Legenda: ✅ terverifikasi di perangkat · 🟡 kode ditulis, belum dikompilasi/diuji · ⬜ belum dikerjakan
 
 ## Status saat ini
-**Versi:** v0.1.0 (Fase 1 — Editor dasar) · **Status build:** 🟡 build CI pertama gagal di kompilasi Kotlin (7 error, semua di `CodeEditorView.kt`); sudah diperbaiki di v0.1.1, menunggu build ulang
+**Versi:** v0.1.0 (Fase 1 — Editor dasar) · **Status build:** 🟡 v0.1.1 lolos kompilasi, tapi **crash saat masuk beranda** (penyebab belum diketahui; v0.1.2 menambah pencatat crash)
 
 | Fase | Isi | Status |
 |---|---|---|
@@ -65,6 +65,12 @@ Kode ditulis dari pengetahuan API Sora-editor 0.23.x tanpa bisa dikompilasi. Tit
 3. Kalau stabil → rilis `v0.1` lalu lanjut sesuai urutan cepat ROADMAP: **Fase 0 spike → Fase 3 → Fase 4** (build di HP)
 
 ## Log perubahan
+### 2026-10-22 — v0.1.2 (diagnosis crash startup)
+- Laporan: app crash saat masuk sampai beranda. Stack trace belum ada
+- Ditambah `CrashLog` (SallyApp.kt): crash ditulis ke file, peluncuran berikutnya menampilkan `CrashScreen` (salin teks)
+- Ditambah **mode aman** (tanpa TextMate/highlight) dari layar crash atau Setelan, untuk mengisolasi apakah highlight penyebabnya
+- Dugaan awal (belum terbukti): TextMate/tm4e di thread background (grammar/tema/language-configuration)
+
 ### 2026-10-22 — v0.1.1 (perbaikan build)
 - Log CI: hanya 7 error, semuanya di `CodeEditorView.kt`; file lain lolos kompilasi
 - `moveSelectionLeft/Right/Up/Down/Home/End` tidak ada di Sora 0.23.4 → diganti navigasi kursor manual via `setSelection`
