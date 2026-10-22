@@ -25,12 +25,27 @@ class EditorHandle {
     fun insert(text: String) { editor?.insertText(text, text.length) }
     fun undo() { editor?.takeIf { it.canUndo() }?.undo() }
     fun redo() { editor?.takeIf { it.canRedo() }?.redo() }
-    fun left() { editor?.moveSelectionLeft() }
-    fun right() { editor?.moveSelectionRight() }
-    fun up() { editor?.moveSelectionUp() }
-    fun down() { editor?.moveSelectionDown() }
-    fun home() { editor?.moveSelectionHome() }
-    fun end() { editor?.moveSelectionEnd() }
+    private fun move(dl: Int, dc: Int, home: Boolean = false, end: Boolean = false) {
+        val ed = editor ?: return
+        val c = ed.cursor
+        var l = c.leftLine
+        var col = c.leftColumn
+        val last = ed.text.lineCount - 1
+        when {
+            home -> col = 0
+            end -> col = ed.text.getColumnCount(l)
+            dc < 0 -> if (col > 0) col-- else if (l > 0) { l--; col = ed.text.getColumnCount(l) }
+            dc > 0 -> if (col < ed.text.getColumnCount(l)) col++ else if (l < last) { l++; col = 0 }
+            dl != 0 -> { l = (l + dl).coerceIn(0, last); col = col.coerceAtMost(ed.text.getColumnCount(l)) }
+        }
+        ed.setSelection(l, col)
+    }
+    fun left() = move(0, -1)
+    fun right() = move(0, 1)
+    fun up() = move(-1, 0)
+    fun down() = move(1, 0)
+    fun home() = move(0, 0, home = true)
+    fun end() = move(0, 0, end = true)
 
     fun cursor(): Pair<Int, Int> = editor?.cursor?.let { it.leftLine + 1 to it.leftColumn + 1 } ?: (1 to 1)
 
@@ -94,7 +109,7 @@ class EditorHandle {
     }
     fun next() { editor?.searcher?.takeIf { it.hasQuery() }?.gotoNext() }
     fun prev() { editor?.searcher?.takeIf { it.hasQuery() }?.gotoPrevious() }
-    fun replaceCurrent(r: String) { editor?.searcher?.takeIf { it.hasQuery() }?.replaceCurrentMatch(r) }
+    fun replaceCurrent(r: String) { editor?.searcher?.takeIf { it.hasQuery() }?.replaceThis(r) }
     fun replaceAll(r: String) { editor?.searcher?.takeIf { it.hasQuery() }?.replaceAll(r) }
     fun stopSearch() { editor?.searcher?.stopSearch() }
 }
