@@ -5,7 +5,7 @@ File ini dicatat ulang **setiap ada update**. Entri terbaru di atas (bagian *Log
 Legenda: ✅ terverifikasi di perangkat · 🟡 kode ditulis, belum dikompilasi/diuji · ⬜ belum dikerjakan
 
 ## Status saat ini
-**Versi:** v0.1.0 (Fase 1 — Editor dasar) · **Status build:** 🟡 v0.1.1 lolos kompilasi, tapi **crash saat masuk beranda** (penyebab belum diketahui; v0.1.2 menambah pencatat crash)
+**Versi:** v0.1.0 (Fase 1 — Editor dasar) · **Status build:** 🟡 v0.1.1 lolos kompilasi, tapi v0.1.3 memperbaiki 2 crash startup dari stack trace; menunggu uji ulang di perangkat
 
 | Fase | Isi | Status |
 |---|---|---|
@@ -65,6 +65,9 @@ Kode ditulis dari pengetahuan API Sora-editor 0.23.x tanpa bisa dikompilasi. Tit
 3. Kalau stabil → rilis `v0.1` lalu lanjut sesuai urutan cepat ROADMAP: **Fase 0 spike → Fase 3 → Fase 4** (build di HP)
 
 ## Log perubahan
+### 2026-10-22 — v0.1.3 (2 crash dari stack trace)
+- **Crash 1 (thread AsyncAnalyzer):** `NoSuchMethodError ArrayList.toArray(IntFunction)` di tm4e → API Java 11 tidak ada di Android 10. Desugar library dinaikkan 2.0.4 → 2.1.5. *Belum terbukti*; kalau masih crash, fallback: highlight tanpa tm4e / mode aman
+- **Crash 2 (main):** `IndexOutOfBounds` di `ScrollableTabRow` M3 saat tab ke-2 dibuka → diganti tab strip buatan sendiri (`TabBar`)
 ### 2026-10-22 — v0.1.2 (diagnosis crash startup)
 - Laporan: app crash saat masuk sampai beranda. Stack trace belum ada
 - Ditambah `CrashLog` (SallyApp.kt): crash ditulis ke file, peluncuran berikutnya menampilkan `CrashScreen` (salin teks)

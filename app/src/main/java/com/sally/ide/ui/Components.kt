@@ -1,6 +1,10 @@
 package com.sally.ide.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.runtime.key
+import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -26,9 +30,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ScrollableTabRow
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -51,20 +53,24 @@ import com.sally.ide.editor.Suggestion
 @Composable
 fun TabBar(tabs: List<EditorTab>, active: Int, onSelect: (Int) -> Unit, onClose: (Int) -> Unit) {
     if (tabs.isEmpty()) return
-    ScrollableTabRow(
-        selectedTabIndex = active.coerceIn(0, tabs.lastIndex),
-        edgePadding = 0.dp,
-        containerColor = MaterialTheme.colorScheme.surfaceContainer,
-    ) {
+    // Tab strip buatan sendiri: ScrollableTabRow M3 crash (IndexOutOfBounds) saat tab baru dibuka & langsung dipilih.
+    Row(Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surfaceContainer).horizontalScroll(rememberScrollState())) {
         tabs.forEachIndexed { i, t ->
-            Tab(selected = i == active, onClick = { onSelect(i) }) {
-                Row(Modifier.padding(start = 12.dp, end = 2.dp).height(44.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Text(t.file.name, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.labelLarge,
-                        modifier = Modifier.widthIn(max = 160.dp))
-                    if (t.dirty) Box(Modifier.padding(start = 6.dp).size(8.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primary))
-                    IconButton(onClick = { onClose(i) }, modifier = Modifier.size(40.dp)) {
-                        Icon(Icons.Filled.Close, contentDescription = "Tutup ${t.file.name}", modifier = Modifier.size(16.dp))
+            key(t.file.path) {
+                val sel = i == active
+                Column(Modifier.clickable { onSelect(i) }) {
+                    Row(Modifier.padding(start = 12.dp, end = 2.dp).height(44.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            t.file.name, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.labelLarge,
+                            color = if (sel) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.widthIn(max = 160.dp),
+                        )
+                        if (t.dirty) Box(Modifier.padding(start = 6.dp).size(8.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primary))
+                        IconButton(onClick = { onClose(i) }, modifier = Modifier.size(40.dp)) {
+                            Icon(Icons.Filled.Close, contentDescription = "Tutup ${t.file.name}", modifier = Modifier.size(16.dp))
+                        }
                     }
+                    Box(Modifier.fillMaxWidth().height(2.dp).background(if (sel) MaterialTheme.colorScheme.primary else Color.Transparent))
                 }
             }
         }

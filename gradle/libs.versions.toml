@@ -7,7 +7,7 @@ lifecycle = "2.8.7"
 datastore = "1.1.1"
 coreKtx = "1.13.1"
 sora = "0.23.4"
-desugar = "2.0.4"
+desugar = "2.1.5"
 
 [libraries]
 androidx-core-ktx = { module = "androidx.core:core-ktx", version.ref = "coreKtx" }
