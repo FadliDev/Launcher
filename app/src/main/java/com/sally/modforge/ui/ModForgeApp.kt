@@ -1,12 +1,7 @@
-@file:OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
-
 package com.sally.modforge.ui
 
-import android.content.Context
-import android.content.Intent
-import android.widget.Toast
-import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -18,37 +13,49 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.AccountCircle
 import androidx.compose.material.icons.outlined.Add
+import androidx.compose.material.icons.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Build
 import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.Code
 import androidx.compose.material.icons.outlined.Cloud
+import androidx.compose.material.icons.outlined.ContentCopy
 import androidx.compose.material.icons.outlined.DeleteOutline
 import androidx.compose.material.icons.outlined.Description
-import androidx.compose.material.icons.outlined.Extension
-import androidx.compose.material.icons.outlined.FolderOpen
-import androidx.compose.material.icons.outlined.MoreVert
+import androidx.compose.material.icons.outlined.Folder
+import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.outlined.Lock
+import androidx.compose.material.icons.outlined.OpenInNew
+import androidx.compose.material.icons.outlined.PlayArrow
+import androidx.compose.material.icons.outlined.Refresh
+import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Settings
-import androidx.compose.material.icons.outlined.ViewInAr
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ElevatedCard
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Divider
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilledTonalButton
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.ScrollableTabRow
@@ -59,854 +66,768 @@ import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.core.content.FileProvider
-import com.sally.modforge.data.ModLoader
+import com.sally.modforge.data.AppPage
+import com.sally.modforge.data.MainTab
+import com.sally.modforge.data.ModForgeController
 import com.sally.modforge.data.ModProject
-import com.sally.modforge.data.ModTemplate
-import com.sally.modforge.data.ProjectRepository
+import com.sally.modforge.data.ProjectSection
+import com.sally.modforge.data.VersionMatrix
+import com.sally.modforge.data.sanitizeModId
 import java.io.File
-import kotlinx.coroutines.launch
-
-private enum class Destination(val label: String) {
-    PROJECTS("Projects"), GITHUB("GitHub & Build"), TEMPLATES("Templates"), SETTINGS("Settings")
-}
-
-private val workspaceTabs = listOf("Overview", "Code", "Visual", "Models", "Build")
 
 @Composable
-fun ModForgeApp() {
-    var darkTheme by rememberSaveable { mutableStateOf(false) }
-    ModForgeTheme(darkTheme = darkTheme) {
-        ModForgeContent(darkTheme = darkTheme, onDarkThemeChange = { darkTheme = it })
+fun ModForgeApp(controller: ModForgeController) {
+    val snackbarHostState = remember { SnackbarHostState() }
+    LaunchedEffect(controller.message) {
+        if (controller.message.isNotBlank()) {
+            snackbarHostState.showSnackbar(controller.message)
+            controller.dismissMessage()
+        }
+    }
+    when (controller.page) {
+        AppPage.Home -> HomeShell(controller, snackbarHostState)
+        AppPage.NewProject -> NewProjectScreen(controller, snackbarHostState)
+        AppPage.Project -> ProjectScreen(controller, snackbarHostState)
+        AppPage.Editor -> EditorScreen(controller, snackbarHostState)
     }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun ModForgeContent(darkTheme: Boolean, onDarkThemeChange: (Boolean) -> Unit) {
-    val context = LocalContext.current
-    val repository = remember(context) { ProjectRepository(context.applicationContext) }
-    var projects by remember { mutableStateOf(repository.listProjects()) }
-    var destination by rememberSaveable { mutableStateOf(Destination.PROJECTS) }
-    var selectedProject by remember { mutableStateOf<ModProject?>(null) }
-    var showCreateDialog by rememberSaveable { mutableStateOf(false) }
-    var templateForNewProject by remember { mutableStateOf(ModTemplate.EMPTY) }
-    var workspaceTab by rememberSaveable { mutableStateOf(0) }
-    var selectedFile by remember { mutableStateOf<String?>(null) }
-    var editorText by remember { mutableStateOf("") }
-    var message by remember { mutableStateOf<String?>(null) }
-    var deleteTarget by remember { mutableStateOf<ModProject?>(null) }
-    val snackbarHostState = remember { SnackbarHostState() }
-    val scope = rememberCoroutineScope()
-
-    fun refresh() { projects = repository.listProjects() }
-
-    LaunchedEffect(selectedProject?.id, selectedFile) {
-        val project = selectedProject
-        val path = selectedFile
-        if (project != null && path != null) editorText = repository.readFile(project.id, path)
+private fun HomeShell(controller: ModForgeController, snackbar: SnackbarHostState) {
+    var query by rememberSaveable { mutableStateOf("") }
+    var searching by rememberSaveable { mutableStateOf(false) }
+    Scaffold(
+        containerColor = MaterialTheme.colorScheme.background,
+        topBar = {
+            TopAppBar(
+                title = {
+                    if (searching && controller.tab == MainTab.Projects) {
+                        OutlinedTextField(
+                            value = query,
+                            onValueChange = { query = it },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true,
+                            placeholder = { Text("Cari project") }
+                        )
+                    } else {
+                        Column {
+                            Text(
+                                when (controller.tab) {
+                                    MainTab.Projects -> "ModForge"
+                                    MainTab.GitHub -> "GitHub"
+                                    MainTab.Settings -> "Pengaturan"
+                                },
+                                fontWeight = FontWeight.SemiBold
+                            )
+                            if (controller.tab == MainTab.Projects) {
+                                Text("Bikin mod Fabric dari HP", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        }
+                    }
+                },
+                actions = {
+                    if (controller.tab == MainTab.Projects) {
+                        IconButton(onClick = { searching = !searching; if (!searching) query = "" }) {
+                            Icon(Icons.Outlined.Search, contentDescription = "Cari project")
+                        }
+                    }
+                    if (controller.tab == MainTab.GitHub && controller.tokenConnected) {
+                        IconButton(onClick = { controller.refreshGitHub() }) {
+                            Icon(Icons.Outlined.Refresh, contentDescription = "Muat ulang akun")
+                        }
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background)
+            )
+        },
+        bottomBar = {
+            NavigationBar(containerColor = MaterialTheme.colorScheme.surface) {
+                NavigationBarItem(
+                    selected = controller.tab == MainTab.Projects,
+                    onClick = { controller.navigateHome(MainTab.Projects) },
+                    icon = { Icon(Icons.Outlined.Folder, contentDescription = null) },
+                    label = { Text("Projects") }
+                )
+                NavigationBarItem(
+                    selected = controller.tab == MainTab.GitHub,
+                    onClick = { controller.navigateHome(MainTab.GitHub) },
+                    icon = { Icon(Icons.Outlined.AccountCircle, contentDescription = null) },
+                    label = { Text("GitHub") }
+                )
+                NavigationBarItem(
+                    selected = controller.tab == MainTab.Settings,
+                    onClick = { controller.navigateHome(MainTab.Settings) },
+                    icon = { Icon(Icons.Outlined.Settings, contentDescription = null) },
+                    label = { Text("Pengaturan") }
+                )
+            }
+        },
+        floatingActionButton = {
+            if (controller.tab == MainTab.Projects) {
+                FloatingActionButton(onClick = controller::openNewProject, containerColor = MaterialTheme.colorScheme.primary, contentColor = MaterialTheme.colorScheme.onPrimary) {
+                    Icon(Icons.Outlined.Add, contentDescription = "Buat project baru")
+                }
+            }
+        },
+        snackbarHost = { SnackbarHost(snackbar) }
+    ) { padding ->
+        Box(Modifier.fillMaxSize().padding(padding)) {
+            when (controller.tab) {
+                MainTab.Projects -> ProjectsHome(controller, query)
+                MainTab.GitHub -> GitHubHome(controller)
+                MainTab.Settings -> SettingsHome(controller)
+            }
+        }
     }
+}
 
-    BackHandler(enabled = selectedProject != null) {
-        selectedProject = null
-        selectedFile = null
-        workspaceTab = 0
-        refresh()
+@Composable
+private fun ProjectsHome(controller: ModForgeController, query: String) {
+    val filtered = controller.projects.filter { it.name.contains(query, true) || it.modId.contains(query, true) }
+    if (filtered.isEmpty()) {
+        Column(
+            Modifier.fillMaxSize().padding(28.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Icon(Icons.Outlined.Code, contentDescription = null, modifier = Modifier.size(54.dp), tint = MaterialTheme.colorScheme.primary)
+            Spacer(Modifier.height(16.dp))
+            Text(if (query.isBlank()) "Belum ada project" else "Project tidak ditemukan", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
+            Spacer(Modifier.height(8.dp))
+            Text(
+                if (query.isBlank()) "Mulai dari template Fabric. File dan konfigurasi akan dibuat langsung di perangkat." else "Coba kata kunci lain.",
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            if (query.isBlank()) {
+                Spacer(Modifier.height(18.dp))
+                Button(onClick = controller::openNewProject) { Icon(Icons.Outlined.Add, null); Spacer(Modifier.width(8.dp)); Text("Buat mod pertama") }
+            }
+        }
+        return
     }
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 24.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        item {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text("Project kamu", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
+                    Text("${controller.projects.size} project tersimpan lokal", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
+                }
+            }
+        }
+        items(filtered, key = { it.id }) { project -> ProjectCard(controller, project) }
+        item {
+            Spacer(Modifier.height(8.dp))
+            Text("Build dikompilasi di GitHub Actions; HP tidak perlu JDK/Gradle.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
+}
+
+@Composable
+private fun ProjectCard(controller: ModForgeController, project: ModProject) {
+    var showDelete by remember { mutableStateOf(false) }
+    OutlinedCard(
+        modifier = Modifier.fillMaxWidth(),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+        colors = CardDefaults.outlinedCardColors(containerColor = MaterialTheme.colorScheme.surface)
+    ) {
+        Column(Modifier.padding(16.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(Modifier.size(42.dp), contentAlignment = Alignment.Center) {
+                    Icon(Icons.Outlined.Code, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(26.dp))
+                }
+                Spacer(Modifier.width(10.dp))
+                Column(Modifier.weight(1f).clickable { controller.openProject(project) }) {
+                    Text(project.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(project.modId, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                IconButton(onClick = { showDelete = true }) { Icon(Icons.Outlined.DeleteOutline, contentDescription = "Hapus project") }
+            }
+            Spacer(Modifier.height(10.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
+                TinyChip("MC ${project.minecraftVersion}")
+                TinyChip("Java ${project.javaVersion}")
+                TinyChip("Gradle ${project.gradleVersion}")
+            }
+            Spacer(Modifier.height(12.dp))
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedButton(onClick = { controller.openProject(project) }, modifier = Modifier.weight(1f)) {
+                    Icon(Icons.Outlined.Folder, contentDescription = null, modifier = Modifier.size(18.dp)); Spacer(Modifier.width(6.dp)); Text("Buka")
+                }
+                Button(onClick = { controller.openProject(project); controller.startBuild() }, modifier = Modifier.weight(1f)) {
+                    Icon(Icons.Outlined.PlayArrow, contentDescription = null, modifier = Modifier.size(18.dp)); Spacer(Modifier.width(4.dp)); Text("Build")
+                }
+            }
+        }
+    }
+    if (showDelete) {
+        AlertDialog(
+            onDismissRequest = { showDelete = false },
+            title = { Text("Hapus project?") },
+            text = { Text("${project.name} dan semua file lokalnya akan dihapus. Repository GitHub tidak ikut dihapus.") },
+            confirmButton = { TextButton(onClick = { showDelete = false; controller.deleteProject(project) }) { Text("Hapus", color = MaterialTheme.colorScheme.error) } },
+            dismissButton = { TextButton(onClick = { showDelete = false }) { Text("Batal") } }
+        )
+    }
+}
+
+@Composable
+private fun TinyChip(label: String) {
+    AssistChip(onClick = {}, label = { Text(label, maxLines = 1) }, modifier = Modifier.height(32.dp))
+}
+
+@Composable
+private fun GitHubHome(controller: ModForgeController) {
+    var pat by rememberSaveable { mutableStateOf("") }
+    Column(
+        Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp)
+    ) {
+        OutlinedCard(Modifier.fillMaxWidth()) {
+            Column(Modifier.padding(16.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Outlined.Cloud, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(30.dp))
+                    Spacer(Modifier.width(12.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text(if (controller.tokenConnected) "GitHub terhubung" else "Hubungkan GitHub", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
+                        Text(
+                            controller.githubUser?.let { "@${it.login}" } ?: "Repo project dan cloud build",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    if (controller.tokenConnected) Icon(Icons.Outlined.CheckCircle, contentDescription = "Terhubung", tint = MaterialTheme.colorScheme.primary)
+                }
+                Spacer(Modifier.height(12.dp))
+                Text("ModForge mengirim source project ke repository GitHub milikmu. Token dienkripsi dengan Android Keystore dan tidak dimasukkan ke source project.", style = MaterialTheme.typography.bodyMedium)
+                if (!controller.tokenConnected) {
+                    Spacer(Modifier.height(16.dp))
+                    Text("Masuk dengan Device Flow", fontWeight = FontWeight.SemiBold)
+                    Text("Atur OAuth Client ID di Pengaturan terlebih dahulu.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Spacer(Modifier.height(8.dp))
+                    Button(onClick = controller::startDeviceFlow, enabled = !controller.busy && controller.oauthClientId.isNotBlank(), modifier = Modifier.fillMaxWidth()) {
+                        if (controller.busy) CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp) else Icon(Icons.Outlined.OpenInNew, null)
+                        Spacer(Modifier.width(8.dp)); Text("Masuk dengan GitHub")
+                    }
+                    if (controller.deviceCode.isNotBlank()) {
+                        Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant), modifier = Modifier.fillMaxWidth()) {
+                            Column(Modifier.padding(14.dp)) {
+                                Text("Kode perangkat", style = MaterialTheme.typography.labelMedium)
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text(controller.deviceCode, style = MaterialTheme.typography.headlineSmall, fontFamily = FontFamily.Monospace, modifier = Modifier.weight(1f))
+                                    val clipboard = LocalClipboardManager.current
+                                    IconButton(onClick = { clipboard.setText(AnnotatedString(controller.deviceCode)); controller.showMessage("Kode disalin.") }) { Icon(Icons.Outlined.ContentCopy, contentDescription = "Salin kode") }
+                                }
+                                Text(controller.deviceStatus, style = MaterialTheme.typography.bodySmall)
+                                TextButton(onClick = { controller.openUrl(controller.deviceVerificationUri) }) { Text("Buka GitHub") }
+                            }
+                        }
+                    }
+                    Divider()
+                    Text("Atau hubungkan dengan Personal Access Token", fontWeight = FontWeight.SemiBold)
+                    OutlinedTextField(
+                        value = pat,
+                        onValueChange = { pat = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        label = { Text("GitHub token") },
+                        placeholder = { Text("github_pat_… atau ghp_…") },
+                        visualTransformation = PasswordVisualTransformation(),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, capitalization = KeyboardCapitalization.None)
+                    )
+                    Text("Token classic membutuhkan scope repo dan workflow. Gunakan hanya di perangkat pribadi.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Button(onClick = { controller.connectWithPersonalToken(pat); pat = "" }, enabled = !controller.busy && pat.isNotBlank(), modifier = Modifier.fillMaxWidth()) {
+                        Text(if (controller.busy) "Memeriksa token…" else "Hubungkan token")
+                    }
+                } else {
+                    Spacer(Modifier.height(8.dp))
+                    OutlinedButton(onClick = controller::refreshGitHub, modifier = Modifier.fillMaxWidth()) { Icon(Icons.Outlined.Refresh, null); Spacer(Modifier.width(8.dp)); Text("Muat ulang repository") }
+                    TextButton(onClick = controller::disconnectGitHub, modifier = Modifier.align(Alignment.End)) { Text("Keluar / hapus token lokal") }
+                }
+            }
+        }
+        if (controller.tokenConnected) {
+            Text("Repository terbaru", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+            if (controller.githubRepos.isEmpty()) {
+                Text("Belum ada repository atau daftar belum dimuat.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            controller.githubRepos.take(30).forEach { repo ->
+                OutlinedCard(Modifier.fillMaxWidth().clickable { controller.openUrl(repo.htmlUrl) }) {
+                    Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Icon(if (repo.isPrivate) Icons.Outlined.Lock else Icons.Outlined.Cloud, contentDescription = null)
+                        Spacer(Modifier.width(12.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text(repo.fullName, fontWeight = FontWeight.SemiBold)
+                            Text(if (repo.isPrivate) "Private" else "Public", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        Icon(Icons.Outlined.OpenInNew, contentDescription = "Buka repository")
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SettingsHome(controller: ModForgeController) {
+    var clientId by rememberSaveable(controller.oauthClientId) { mutableStateOf(controller.oauthClientId) }
+    Column(
+        Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp)
+    ) {
+        OutlinedCard(Modifier.fillMaxWidth()) {
+            Column(Modifier.padding(16.dp)) {
+                Text("Tampilan", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text(if (controller.isDark) "Tema gelap" else "Tema terang")
+                        Text("Gunakan aksen hijau ModForge", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    Switch(checked = controller.isDark, onCheckedChange = { controller.toggleDarkTheme() })
+                }
+            }
+        }
+        OutlinedCard(Modifier.fillMaxWidth()) {
+            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text("OAuth Device Flow", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                Text("Isi Client ID dari OAuth App milik penerbit aplikasi. OAuth App harus mengaktifkan Device Flow. Client ID bukan secret; token hasil login tetap disimpan terenkripsi di perangkat.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                OutlinedTextField(
+                    value = clientId,
+                    onValueChange = { clientId = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    label = { Text("OAuth Client ID") },
+                    placeholder = { Text("Iv1.…") }
+                )
+                Button(onClick = { controller.saveOAuthClientId(clientId) }, modifier = Modifier.fillMaxWidth()) { Text("Simpan Client ID") }
+            }
+        }
+        OutlinedCard(Modifier.fillMaxWidth()) {
+            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("Tentang ModForge", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                Text("Versi 0.1.0 · Fondasi MVP", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("Dibuat oleh sally. ModForge bukan produk resmi Mojang atau Microsoft.")
+                Divider()
+                Text("MVP sekarang: project Fabric lokal, generator template dasar, editor teks sederhana, GitHub sync dan remote build. Editor cerdas, visual scripting, model 3D, dan asset painter menyusul sesuai roadmap.", style = MaterialTheme.typography.bodySmall)
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun NewProjectScreen(controller: ModForgeController, snackbar: SnackbarHostState) {
+    var name by rememberSaveable { mutableStateOf("My First Mod") }
+    var modId by rememberSaveable { mutableStateOf("myfirstmod") }
+    var packageName by rememberSaveable { mutableStateOf("com.sally.myfirstmod") }
+    var minecraft by rememberSaveable { mutableStateOf("1.21.1") }
+    var template by rememberSaveable { mutableStateOf("Empty") }
+    var visibility by rememberSaveable { mutableStateOf("private") }
+    var modIdEdited by rememberSaveable { mutableStateOf(false) }
+    var packageEdited by rememberSaveable { mutableStateOf(false) }
+    var versionMenu by remember { mutableStateOf(false) }
+    val profile = VersionMatrix.profile(minecraft)
 
     Scaffold(
+        containerColor = MaterialTheme.colorScheme.background,
+        topBar = {
+            TopAppBar(
+                title = { Column { Text("Project baru", fontWeight = FontWeight.SemiBold); Text("Langkah 1–3 · dasar dan template", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant) } },
+                navigationIcon = { IconButton(onClick = { controller.navigateHome() }) { Icon(Icons.Outlined.ArrowBack, contentDescription = "Kembali") } },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background)
+            )
+        },
+        snackbarHost = { SnackbarHost(snackbar) }
+    ) { padding ->
+        Column(
+            Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                StepDot("1", active = true); Divider(Modifier.width(24.dp)); StepDot("2", active = true); Divider(Modifier.width(24.dp)); StepDot("3", active = true)
+                Spacer(Modifier.weight(1f)); Text("Fabric", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.SemiBold)
+            }
+            Text("Dasar project", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
+            OutlinedTextField(
+                value = name,
+                onValueChange = { new ->
+                    name = new
+                    if (!modIdEdited) modId = sanitizeModId(new.replace(' ', '_'))
+                    if (!packageEdited) packageName = "com.sally.${sanitizeModId(new.replace(' ', '_'))}"
+                },
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text("Nama mod") },
+                singleLine = true
+            )
+            OutlinedTextField(
+                value = modId,
+                onValueChange = { modId = it.lowercase(); modIdEdited = true },
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text("Mod ID") },
+                supportingText = { Text("Huruf kecil, angka, _ atau -") },
+                singleLine = true
+            )
+            OutlinedTextField(
+                value = packageName,
+                onValueChange = { packageName = it; packageEdited = true },
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text("Package Java") },
+                supportingText = { Text("Contoh: com.sally.myfirstmod") },
+                singleLine = true
+            )
+            Divider()
+            Text("Versi Minecraft", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
+            Box {
+                OutlinedButton(onClick = { versionMenu = true }, modifier = Modifier.fillMaxWidth()) {
+                    Column(Modifier.weight(1f), horizontalAlignment = Alignment.Start) {
+                        Text("Minecraft $minecraft", fontWeight = FontWeight.SemiBold)
+                        Text("Java ${profile.java} · Gradle ${profile.gradle}${if (profile.experimental) " · Eksperimental" else ""}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    Text("⌄")
+                }
+                DropdownMenu(expanded = versionMenu, onDismissRequest = { versionMenu = false }) {
+                    VersionMatrix.profiles.forEach { item ->
+                        DropdownMenuItem(
+                            text = {
+                                Column {
+                                    Text("Minecraft ${item.minecraft}")
+                                    Text("Java ${item.java} · Gradle ${item.gradle}${if (item.experimental) " · Eksperimental" else ""}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
+                            },
+                            onClick = {
+                                minecraft = item.minecraft
+                                if (item.minecraft == "26.3") template = "Empty"
+                                versionMenu = false
+                            }
+                        )
+                    }
+                }
+            }
+            if (profile.experimental) {
+                Card(colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF2D7)), modifier = Modifier.fillMaxWidth()) {
+                    Row(Modifier.padding(12.dp), verticalAlignment = Alignment.Top) {
+                        Icon(Icons.Outlined.Info, contentDescription = null, tint = Color(0xFF8C5B00))
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                    if (minecraft == "26.3") "Minecraft 26.3 masih eksperimental. Untuk mencegah template API yang belum diverifikasi, pilihan saat ini dibatasi ke Empty." else "Kombinasi versi ini masih eksperimental dalam build awal ModForge. Build aktual bergantung pada kompatibilitas Fabric Loom dan dependency versi tersebut.",
+                    color = Color(0xFF5B3B00), style = MaterialTheme.typography.bodySmall
+                )
+                    }
+                }
+            }
+            Text("Template", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
+            Text("Pilih struktur awal. Kode dapat diedit setelah project dibuat.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                listOf("Empty", "Item", "Block", "Item + Block", "Event").chunked(2).forEach { rowItems ->
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        rowItems.forEach { item ->
+                            FilterChip(
+                                selected = template == item,
+                                onClick = { template = item },
+                                enabled = minecraft != "26.3" || item == "Empty",
+                                label = { Text(item) },
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                        if (rowItems.size == 1) Spacer(Modifier.weight(1f))
+                    }
+                }
+            }
+            Text("Repository", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                FilterChip(selected = visibility == "private", onClick = { visibility = "private" }, label = { Icon(Icons.Outlined.Lock, null, modifier = Modifier.size(15.dp)); Spacer(Modifier.width(4.dp)); Text("Private") }, modifier = Modifier.weight(1f))
+                FilterChip(selected = visibility == "public", onClick = { visibility = "public" }, label = { Icon(Icons.Outlined.Cloud, null, modifier = Modifier.size(15.dp)); Spacer(Modifier.width(4.dp)); Text("Public") }, modifier = Modifier.weight(1f))
+            }
+            Text("Project dibuat di perangkat terlebih dahulu. Repository GitHub dibuat saat kamu menekan Build setelah login.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Spacer(Modifier.height(4.dp))
+            Button(
+                onClick = { controller.createProject(name, modId, packageName, minecraft, template, visibility) },
+                enabled = !controller.busy,
+                modifier = Modifier.fillMaxWidth().height(52.dp)
+            ) {
+                if (controller.busy) CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp) else Icon(Icons.Outlined.Add, null)
+                Spacer(Modifier.width(8.dp)); Text(if (controller.busy) "Membuat project…" else "Buat Project")
+            }
+            Spacer(Modifier.height(12.dp))
+        }
+    }
+}
+
+@Composable
+private fun StepDot(number: String, active: Boolean) {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = if (active) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant),
+        modifier = Modifier.size(28.dp)
+    ) {
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Text(number, color = if (active) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant, fontWeight = FontWeight.SemiBold)
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ProjectScreen(controller: ModForgeController, snackbar: SnackbarHostState) {
+    val project = controller.selectedProject
+    if (project == null) {
+        LaunchedEffect(Unit) { controller.navigateHome() }
+        return
+    }
+    Scaffold(
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             TopAppBar(
                 title = {
                     Column {
-                        Text(selectedProject?.name ?: "ModForge Studio", fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        if (selectedProject == null) Text(destination.label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(project.name, maxLines = 1, overflow = TextOverflow.Ellipsis, fontWeight = FontWeight.SemiBold)
+                        Text("MC ${project.minecraftVersion} · Java ${project.javaVersion}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 },
-                navigationIcon = {
-                    if (selectedProject != null) {
-                        IconButton(onClick = {
-                            selectedProject = null
-                            selectedFile = null
-                            workspaceTab = 0
-                            refresh()
-                        }) { Icon(Icons.Outlined.FolderOpen, contentDescription = "Kembali ke projects") }
-                    }
-                },
+                navigationIcon = { IconButton(onClick = { controller.navigateHome() }) { Icon(Icons.Outlined.ArrowBack, contentDescription = "Kembali ke projects") } },
                 actions = {
-                    if (selectedProject != null && workspaceTab == 1) {
-                        TextButton(onClick = {
-                            selectedProject?.let { project ->
-                                selectedFile?.let { path -> repository.writeFile(project.id, path, editorText) }
-                                message = "Tersimpan lokal ✓"
-                                refresh()
-                                scope.launch { snackbarHostState.showSnackbar("File disimpan di perangkat") }
-                            }
-                        }) { Text("Save") }
-                    } else if (selectedProject != null && workspaceTab == 4) {
-                        IconButton(onClick = { message = "Build cloud belum terhubung di milestone ini." }) {
-                            Icon(Icons.Outlined.Build, contentDescription = "Build")
-                        }
+                    IconButton(onClick = { controller.projectSection = ProjectSection.Build; controller.startBuild() }) {
+                        Icon(Icons.Outlined.PlayArrow, contentDescription = "Build mod")
                     }
-                }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background)
             )
         },
-        bottomBar = {
-            if (selectedProject == null) {
-                NavigationBar {
-                    Destination.entries.forEach { item ->
-                        NavigationBarItem(
-                            selected = destination == item,
-                            onClick = { destination = item },
-                            icon = {
-                                Icon(
-                                    when (item) {
-                                        Destination.PROJECTS -> Icons.Outlined.FolderOpen
-                                        Destination.GITHUB -> Icons.Outlined.Cloud
-                                        Destination.TEMPLATES -> Icons.Outlined.Extension
-                                        Destination.SETTINGS -> Icons.Outlined.Settings
-                                    },
-                                    contentDescription = item.label
-                                )
-                            },
-                            label = { Text(item.label, maxLines = 1) }
-                        )
-                    }
-                }
-            }
-        },
-        floatingActionButton = {
-            if (selectedProject == null && destination == Destination.PROJECTS) {
-                FloatingActionButton(onClick = {
-                    templateForNewProject = ModTemplate.EMPTY
-                    showCreateDialog = true
-                }) {
-                    Icon(Icons.Outlined.Add, contentDescription = "Project baru")
-                }
-            }
-        },
-        snackbarHost = { SnackbarHost(snackbarHostState) }
+        snackbarHost = { SnackbarHost(snackbar) }
     ) { padding ->
-        Box(Modifier.fillMaxSize().padding(padding)) {
-            if (selectedProject != null) {
-                WorkspaceScreen(
-                    project = selectedProject!!,
-                    repository = repository,
-                    tabIndex = workspaceTab,
-                    onTabChange = { workspaceTab = it },
-                    selectedFile = selectedFile,
-                    onSelectFile = { selectedFile = it },
-                    editorText = editorText,
-                    onEditorTextChange = { editorText = it },
-                    message = message,
-                    onMessage = { message = it },
-                    onExport = { project -> shareProjectZip(context, repository, project) },
-                    onRefresh = { refresh() }
+        Column(Modifier.fillMaxSize().padding(padding)) {
+            ScrollableTabRow(selectedTabIndex = controller.projectSection.ordinal, edgePadding = 8.dp, containerColor = MaterialTheme.colorScheme.background) {
+                ProjectSection.entries.forEach { section ->
+                    Tab(
+                        selected = controller.projectSection == section,
+                        onClick = { controller.projectSection = section },
+                        text = { Text(section.label) }
+                    )
+                }
+            }
+            when (controller.projectSection) {
+                ProjectSection.Overview -> OverviewSection(controller, project)
+                ProjectSection.Code -> FileListSection(controller, project, showAll = true)
+                ProjectSection.Visual -> FeatureComingSection(
+                    icon = "◇", title = "Visual scripting", milestone = "Milestone M5",
+                    body = "Node graph, koneksi port bertipe, validasi dan generator Java belum diaktifkan pada build fondasi ini."
                 )
-            } else {
-                when (destination) {
-                    Destination.PROJECTS -> ProjectsScreen(
-                        projects = projects,
-                        onOpen = { project ->
-                            selectedProject = project
-                            workspaceTab = 0
-                            selectedFile = null
-                            message = null
-                        },
-                        onDelete = { project -> deleteTarget = project },
-                        onCreate = { showCreateDialog = true }
-                    )
-                    Destination.GITHUB -> GitHubBuildScreen()
-                    Destination.TEMPLATES -> TemplatesScreen(onUseTemplate = { template ->
-                        templateForNewProject = template
-                        showCreateDialog = true
-                    })
-                    Destination.SETTINGS -> SettingsScreen(darkTheme, onDarkThemeChange)
-                }
-            }
-        }
-    }
-
-    if (deleteTarget != null) {
-        val target = deleteTarget!!
-        AlertDialog(
-            onDismissRequest = { deleteTarget = null },
-            title = { Text("Hapus ${target.name}?") },
-            text = { Text("Source lokal project ini akan dihapus permanen dari aplikasi. Ekspor ZIP terlebih dahulu bila ingin menyimpannya.") },
-            confirmButton = {
-                Button(onClick = {
-                    repository.deleteProject(target.id)
-                    deleteTarget = null
-                    refresh()
-                    scope.launch { snackbarHostState.showSnackbar("Project ${target.name} dihapus") }
-                }) { Text("Hapus") }
-            },
-            dismissButton = { TextButton(onClick = { deleteTarget = null }) { Text("Batal") } }
-        )
-    }
-
-    if (showCreateDialog) {
-        CreateProjectDialog(
-            initialTemplate = templateForNewProject,
-            onDismiss = { showCreateDialog = false },
-            onCreate = { draft ->
-                val created = repository.createProject(draft)
-                showCreateDialog = false
-                destination = Destination.PROJECTS
-                selectedProject = created
-                workspaceTab = 0
-                selectedFile = null
-                message = "Project dibuat · file tersimpan lokal"
-                refresh()
-            }
-        )
-    }
-}
-
-@Composable
-private fun ProjectsScreen(
-    projects: List<ModProject>,
-    onOpen: (ModProject) -> Unit,
-    onDelete: (ModProject) -> Unit,
-    onCreate: () -> Unit
-) {
-    if (projects.isEmpty()) {
-        Column(
-            modifier = Modifier.fillMaxSize().padding(horizontal = 28.dp, vertical = 24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-        ) {
-            Card(shape = RoundedCornerShape(32.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)) {
-                Box(Modifier.padding(26.dp), contentAlignment = Alignment.Center) {
-                    Icon(Icons.Outlined.Extension, contentDescription = null, modifier = Modifier.size(64.dp), tint = MaterialTheme.colorScheme.onPrimaryContainer)
-                }
-            }
-            Spacer(Modifier.height(24.dp))
-            Text("Buat mod pertamamu", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-            Spacer(Modifier.height(8.dp))
-            Text("Mulai dengan template, edit file mod, lalu ekspor project untuk dibuild.", color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Spacer(Modifier.height(20.dp))
-            Button(onClick = onCreate) { Icon(Icons.Outlined.Add, null); Spacer(Modifier.width(8.dp)); Text("Project Baru") }
-            Spacer(Modifier.height(12.dp))
-            Text("Save selalu lokal. Integrasi GitHub cloud build ditandai terpisah.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
-    } else {
-        Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.weight(1f)) {
-                    Text("Projects", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
-                    Text("${projects.size} project tersimpan di perangkat", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-                FilledTonalButton(onClick = onCreate) { Icon(Icons.Outlined.Add, null); Spacer(Modifier.width(6.dp)); Text("Baru") }
-            }
-            Spacer(Modifier.height(16.dp))
-            projects.forEach { project ->
-                ProjectCard(project, onOpen = { onOpen(project) }, onDelete = { onDelete(project) })
-                Spacer(Modifier.height(12.dp))
-            }
-            Spacer(Modifier.height(64.dp))
-        }
-    }
-}
-
-@Composable
-private fun ProjectCard(project: ModProject, onOpen: () -> Unit, onDelete: () -> Unit) {
-    var menuOpen by remember { mutableStateOf(false) }
-    ElevatedCard(onClick = onOpen, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(24.dp)) {
-        Column(Modifier.padding(16.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Card(shape = RoundedCornerShape(15.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)) {
-                    Icon(Icons.Outlined.Extension, contentDescription = null, modifier = Modifier.padding(12.dp).size(26.dp), tint = MaterialTheme.colorScheme.onPrimaryContainer)
-                }
-                Spacer(Modifier.width(12.dp))
-                Column(Modifier.weight(1f)) {
-                    Text(project.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    Text("${project.modId} · ${project.minecraftVersion}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                }
-                Box {
-                    IconButton(onClick = { menuOpen = true }) { Icon(Icons.Outlined.MoreVert, contentDescription = "Menu project") }
-                    androidx.compose.material3.DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
-                        androidx.compose.material3.DropdownMenuItem(
-                            text = { Text("Hapus project") },
-                            leadingIcon = { Icon(Icons.Outlined.DeleteOutline, null) },
-                            onClick = { menuOpen = false; onDelete() }
-                        )
-                    }
-                }
-            }
-            Spacer(Modifier.height(14.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                LoaderBadge(project.loader)
-                Tag(text = project.template.label)
-                Spacer(Modifier.weight(1f))
-                Icon(Icons.Outlined.Description, contentDescription = null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                Text(project.buildStatus, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                ProjectSection.Models -> FeatureComingSection(
+                    icon = "◈", title = "Editor model 3D", milestone = "Milestone M4",
+                    body = "Viewport 3D, cuboid, texture painter dan ekspor model akan ditambahkan setelah fondasi project/build stabil."
+                )
+                ProjectSection.Assets -> FileListSection(controller, project, showAll = false)
+                ProjectSection.Build -> BuildSection(controller, project)
             }
         }
     }
 }
 
 @Composable
-private fun LoaderBadge(loader: ModLoader) {
-    val color = when (loader) {
-        ModLoader.FABRIC -> MaterialTheme.colorScheme.primaryContainer
-        ModLoader.FORGE -> MaterialTheme.colorScheme.secondaryContainer
-        ModLoader.NEOFORGE -> MaterialTheme.colorScheme.tertiaryContainer
-    }
-    Card(shape = RoundedCornerShape(50), colors = CardDefaults.cardColors(containerColor = color)) {
-        Text(loader.label, modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp), style = MaterialTheme.typography.labelMedium)
-    }
-}
-
-@Composable
-private fun Tag(text: String) {
-    Card(shape = RoundedCornerShape(50), border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
-        Text(text, modifier = Modifier.padding(horizontal = 9.dp, vertical = 5.dp), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-    }
-}
-
-@Composable
-private fun WorkspaceScreen(
-    project: ModProject,
-    repository: ProjectRepository,
-    tabIndex: Int,
-    onTabChange: (Int) -> Unit,
-    selectedFile: String?,
-    onSelectFile: (String) -> Unit,
-    editorText: String,
-    onEditorTextChange: (String) -> Unit,
-    message: String?,
-    onMessage: (String?) -> Unit,
-    onExport: (ModProject) -> Unit,
-    onRefresh: () -> Unit
-) {
-    Column(Modifier.fillMaxSize()) {
-        ScrollableTabRow(selectedTabIndex = tabIndex, edgePadding = 12.dp) {
-            workspaceTabs.forEachIndexed { index, title ->
-                Tab(selected = tabIndex == index, onClick = { onTabChange(index) }, text = { Text(title) })
+private fun OverviewSection(controller: ModForgeController, project: ModProject) {
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        OutlinedCard(Modifier.fillMaxWidth()) {
+            Column(Modifier.padding(16.dp)) {
+                Text("Instance", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                Spacer(Modifier.height(10.dp))
+                InfoRow("Minecraft", project.minecraftVersion)
+                InfoRow("Java", project.javaVersion.toString())
+                InfoRow("Gradle", project.gradleVersion)
+                InfoRow("Loader", "Fabric")
+                InfoRow("Template", project.template)
             }
         }
-        when (tabIndex) {
-            0 -> OverviewScreen(project, repository, onExport)
-            1 -> CodeScreen(project, repository, selectedFile, onSelectFile, editorText, onEditorTextChange, message, onMessage, onRefresh)
-            2 -> RoadmapFeatureScreen(
-                icon = Icons.Outlined.Code,
-                title = "Visual Scripting",
-                description = "Canvas node untuk Event → Kondisi → Aksi akan ditambahkan pada fase berikutnya. Project file lokal tetap bisa diedit dari tab Code.",
-                bullets = listOf("Node graph dan port bertipe", "Generator kode Java per loader", "Validasi graph sebelum build")
-            )
-            3 -> RoadmapFeatureScreen(
-                icon = Icons.Outlined.ViewInAr,
-                title = "3D Item / Block Editor",
-                description = "Editor model visual masih menjadi roadmap. Untuk sekarang kamu bisa memasukkan JSON model dan PNG texture melalui file project.",
-                bullets = listOf("Viewport 3D dan gizmo", "Edit elemen cube dan UV", "Preview inventory / tangan / tanah")
-            )
-            else -> BuildScreen(project, onExport, onMessage)
+        OutlinedCard(Modifier.fillMaxWidth()) {
+            Column(Modifier.padding(16.dp)) {
+                Text("Metadata", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                Spacer(Modifier.height(10.dp))
+                InfoRow("Mod ID", project.modId)
+                InfoRow("Package", project.packageName)
+                InfoRow("Author", project.author)
+                InfoRow("Visibilitas repo", project.visibility.replaceFirstChar(Char::uppercase))
+            }
         }
-    }
-}
-
-@Composable
-private fun OverviewScreen(project: ModProject, repository: ProjectRepository, onExport: (ModProject) -> Unit) {
-    val files = remember(project.id) { repository.listFiles(project.id) }
-    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp)) {
-        Card(shape = RoundedCornerShape(28.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)) {
-            Column(Modifier.fillMaxWidth().padding(20.dp)) {
-                Text(project.name, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimaryContainer)
-                Spacer(Modifier.height(6.dp))
-                Text(project.description, color = MaterialTheme.colorScheme.onPrimaryContainer)
-                Spacer(Modifier.height(14.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    LoaderBadge(project.loader)
-                    Tag("MC ${project.minecraftVersion}")
+        OutlinedCard(Modifier.fillMaxWidth()) {
+            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("Repository", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                if (project.repoOwner.isBlank()) {
+                    Text("Belum terhubung ke GitHub. Tekan Build untuk membuat repo dan memulai build cloud.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Button(onClick = { controller.projectSection = ProjectSection.Build; controller.startBuild() }, modifier = Modifier.fillMaxWidth()) { Icon(Icons.Outlined.PlayArrow, null); Spacer(Modifier.width(6.dp)); Text("Build di GitHub Actions") }
+                } else {
+                    InfoRow("Repo", "${project.repoOwner}/${project.repoName}")
+                    InfoRow("Branch", project.branch)
+                    InfoRow("Status", if (project.lastSyncedSha.isBlank()) "Belum sync" else "Tersinkron")
+                    OutlinedButton(onClick = { controller.openUrl("https://github.com/${project.repoOwner}/${project.repoName}") }, modifier = Modifier.fillMaxWidth()) { Icon(Icons.Outlined.OpenInNew, null); Spacer(Modifier.width(8.dp)); Text("Buka repository") }
                 }
             }
         }
-        Spacer(Modifier.height(18.dp))
-        Text("Ringkasan", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-        Spacer(Modifier.height(10.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            MetricCard("Files", files.size.toString(), Modifier.weight(1f))
-            MetricCard("Template", project.template.label, Modifier.weight(1f))
-        }
-        Spacer(Modifier.height(10.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            MetricCard("Versi mod", project.modVersion, Modifier.weight(1f))
-            MetricCard("Build", "Belum berjalan", Modifier.weight(1f))
-        }
-        Spacer(Modifier.height(20.dp))
-        Text("Langkah selanjutnya", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-        Spacer(Modifier.height(8.dp))
-        InfoRow("1", "Buka Code untuk melihat dan mengedit file.")
-        InfoRow("2", "Ekspor ZIP project atau unggah ke repository GitHub.")
-        InfoRow("3", "Jalankan workflow build di tab Actions repository.")
-        Spacer(Modifier.height(16.dp))
-        Button(onClick = { onExport(project) }, modifier = Modifier.fillMaxWidth()) {
-            Icon(Icons.Outlined.FolderOpen, null); Spacer(Modifier.width(8.dp)); Text("Ekspor project ZIP")
-        }
-        Spacer(Modifier.height(6.dp))
-        Text("Build cloud otomatis dari aplikasi belum aktif di versi starter ini.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text("Tip: buka Code untuk mengedit file sumber. File tersimpan otomatis di direktori privat aplikasi.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 
 @Composable
-private fun MetricCard(label: String, value: String, modifier: Modifier = Modifier) {
-    Card(modifier, shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)) {
-        Column(Modifier.padding(14.dp)) {
-            Text(label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Spacer(Modifier.height(4.dp))
-            Text(value, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-        }
+private fun InfoRow(label: String, value: String) {
+    Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.Top) {
+        Text(label, modifier = Modifier.weight(0.9f), color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(value, modifier = Modifier.weight(1.3f), fontWeight = FontWeight.Medium)
     }
 }
 
 @Composable
-private fun InfoRow(number: String, text: String) {
-    Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-        Card(shape = RoundedCornerShape(50), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)) {
-            Text(number, modifier = Modifier.padding(horizontal = 11.dp, vertical = 6.dp), fontWeight = FontWeight.SemiBold)
-        }
-        Spacer(Modifier.width(12.dp))
-        Text(text, style = MaterialTheme.typography.bodyMedium)
+private fun FileListSection(controller: ModForgeController, project: ModProject, showAll: Boolean) {
+    val files = controller.store.listSourceFiles(project).filter { path ->
+        if (showAll) path != "README.md" && path != ".gitignore" && !path.startsWith(".github/") else path.startsWith("src/main/resources/")
     }
-}
-
-@Composable
-private fun CodeScreen(
-    project: ModProject,
-    repository: ProjectRepository,
-    selectedFile: String?,
-    onSelectFile: (String) -> Unit,
-    editorText: String,
-    onEditorTextChange: (String) -> Unit,
-    message: String?,
-    onMessage: (String?) -> Unit,
-    onRefresh: () -> Unit
-) {
-    val files = repository.listFiles(project.id)
-    var showNewFileDialog by remember { mutableStateOf(false) }
-    var newFilePath by remember { mutableStateOf("src/main/java/${project.packageName.replace('.', '/')}/NewFeature.java") }
-    var newFileError by remember { mutableStateOf<String?>(null) }
-    Column(Modifier.fillMaxSize().padding(12.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("File explorer", modifier = Modifier.weight(1f), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-            IconButton(onClick = { showNewFileDialog = true }) { Icon(Icons.Outlined.Add, contentDescription = "File baru") }
-        }
-        Spacer(Modifier.height(6.dp))
-        Card(shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)) {
-            Column(Modifier.fillMaxWidth().height(156.dp).verticalScroll(rememberScrollState()).padding(8.dp)) {
-                files.forEach { path ->
-                    val active = path == selectedFile
-                    TextButton(onClick = { onSelectFile(path); onMessage(null) }, modifier = Modifier.fillMaxWidth()) {
-                        Icon(if (path.endsWith(".java")) Icons.Outlined.Code else Icons.Outlined.Description, null, modifier = Modifier.size(18.dp))
-                        Spacer(Modifier.width(8.dp))
-                        Text(path, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis, fontFamily = FontFamily.Monospace, color = if (active) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface)
-                    }
-                }
-            }
-        }
-        Spacer(Modifier.height(12.dp))
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(selectedFile ?: "Pilih file", modifier = Modifier.weight(1f), style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            FilledTonalButton(onClick = {
-                if (selectedFile != null) {
-                    repository.writeFile(project.id, selectedFile, editorText)
-                    onMessage("Tersimpan lokal ✓")
-                    onRefresh()
-                }
-            }, enabled = selectedFile != null) { Text("Save") }
-        }
-        if (message != null) Text(message, color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelSmall)
-        Spacer(Modifier.height(6.dp))
-        if (selectedFile == null) {
-            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text("Pilih file dari daftar untuk mulai mengedit.", color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-        } else {
-            OutlinedTextField(
-                value = editorText,
-                onValueChange = onEditorTextChange,
-                modifier = Modifier.fillMaxWidth().weight(1f),
-                textStyle = androidx.compose.ui.text.TextStyle(fontFamily = FontFamily.Monospace, fontSize = 13.sp, lineHeight = 19.sp),
-                shape = RoundedCornerShape(16.dp),
-                placeholder = { Text("Isi file…") },
-                supportingText = { Text("Editor dasar · simpan manual · belum ada syntax highlighting") }
-            )
-        }
-    }
-    if (showNewFileDialog) {
-        AlertDialog(
-            onDismissRequest = { showNewFileDialog = false; newFileError = null },
-            title = { Text("Buat file baru") },
-            text = {
-                Column {
-                    Text("Masukkan path relatif dari root project.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Spacer(Modifier.height(8.dp))
-                    OutlinedTextField(
-                        value = newFilePath,
-                        onValueChange = { newFilePath = it; newFileError = null },
-                        modifier = Modifier.fillMaxWidth(),
-                        label = { Text("Path file") },
-                        singleLine = true
-                    )
-                    if (newFileError != null) Text(newFileError!!, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
-                }
-            },
-            confirmButton = {
-                Button(onClick = {
-                    val path = newFilePath.trim().replace('\\', '/')
-                    if (path.isBlank() || path.startsWith("/") || path.split('/').any { it == ".." } || path.endsWith('/')) {
-                        newFileError = "Path tidak valid. Gunakan path relatif, tanpa segmen '..'."
-                    } else {
-                        repository.writeFile(project.id, path, "")
-                        showNewFileDialog = false
-                        newFileError = null
-                        onSelectFile(path)
-                        onMessage("File baru dibuat · belum disimpan ke remote")
-                        onRefresh()
-                    }
-                }) { Text("Buat") }
-            },
-            dismissButton = { TextButton(onClick = { showNewFileDialog = false; newFileError = null }) { Text("Batal") } }
-        )
-    }
-}
-
-@Composable
-private fun BuildScreen(project: ModProject, onExport: (ModProject) -> Unit, onMessage: (String?) -> Unit) {
-    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp)) {
-        Card(shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)) {
-            Column(Modifier.padding(18.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Outlined.Build, contentDescription = null, modifier = Modifier.size(30.dp), tint = MaterialTheme.colorScheme.primary)
-                    Spacer(Modifier.width(12.dp))
-                    Column(Modifier.weight(1f)) {
-                        Text("Build status", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                        Text("Belum ada run", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                }
-                Spacer(Modifier.height(14.dp))
-                Text("Di versi ini aplikasi sudah membuat file workflow untuk project. Hubungkan repository secara manual dan jalankan Actions; kontrol OAuth, push, polling log, dan unduh artifact otomatis belum diimplementasikan.")
-                Spacer(Modifier.height(16.dp))
-                Button(onClick = { onExport(project) }, modifier = Modifier.fillMaxWidth()) {
-                    Icon(Icons.Outlined.FolderOpen, null); Spacer(Modifier.width(8.dp)); Text("Ekspor ZIP untuk GitHub")
-                }
-                Spacer(Modifier.height(8.dp))
-                OutlinedButton(onClick = { onMessage("Workflow ada di .github/workflows/build.yml pada ZIP project.") }, modifier = Modifier.fillMaxWidth()) {
-                    Icon(Icons.Outlined.Description, null); Spacer(Modifier.width(8.dp)); Text("Info workflow")
-                }
-            }
-        }
-        Spacer(Modifier.height(16.dp))
-        Text("Pipeline yang disiapkan", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-        Spacer(Modifier.height(8.dp))
-        InfoRow("1", "Checkout source code dari repository.")
-        InfoRow("2", "Pasang Java dan Gradle yang dipilih oleh template.")
-        InfoRow("3", "Jalankan Gradle build dan upload JAR sebagai artifact.")
-    }
-}
-
-@Composable
-private fun GitHubBuildScreen() {
-    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp)) {
-        Card(shape = RoundedCornerShape(28.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)) {
-            Column(Modifier.padding(20.dp)) {
-                Icon(Icons.Outlined.Cloud, contentDescription = null, modifier = Modifier.size(36.dp), tint = MaterialTheme.colorScheme.onPrimaryContainer)
-                Spacer(Modifier.height(12.dp))
-                Text("GitHub & Build", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimaryContainer)
-                Spacer(Modifier.height(6.dp))
-                Text("Cloud build adalah bagian inti roadmap, tetapi belum dikoneksikan pada starter ini. Aplikasi tidak meminta token atau menyimpan credential dulu.", color = MaterialTheme.colorScheme.onPrimaryContainer)
-            }
-        }
-        Spacer(Modifier.height(16.dp))
-        Text("Status fitur", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-        Spacer(Modifier.height(8.dp))
-        FeatureStatusRow("Export project ZIP", true)
-        FeatureStatusRow("Workflow GitHub Actions di project", true)
-        FeatureStatusRow("GitHub Device Flow / OAuth", false)
-        FeatureStatusRow("Buat repo dan push commit dari app", false)
-        FeatureStatusRow("Pantau run, log, dan download JAR otomatis", false)
-        Spacer(Modifier.height(14.dp))
-        Text("Keamanan", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-        Text("Integrasi token akan memakai penyimpanan terenkripsi Android dan tidak akan menaruh token di file project, workflow, maupun log build.", color = MaterialTheme.colorScheme.onSurfaceVariant)
-    }
-}
-
-@Composable
-private fun FeatureStatusRow(label: String, done: Boolean) {
-    Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-        Icon(if (done) Icons.Outlined.CheckCircle else Icons.Outlined.Cloud, contentDescription = null, tint = if (done) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
-        Spacer(Modifier.width(12.dp))
-        Text(label, modifier = Modifier.weight(1f))
-        Tag(if (done) "Siap" else "Roadmap")
-    }
-}
-
-@Composable
-private fun TemplatesScreen(onUseTemplate: (ModTemplate) -> Unit) {
-    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp)) {
-        Text("Templates", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
-        Text("Pilih contoh untuk memulai project baru.", color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Spacer(Modifier.height(16.dp))
-        ModTemplate.entries.forEach { template ->
-            ElevatedCard(onClick = { onUseTemplate(template) }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(22.dp)) {
-                Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Card(shape = RoundedCornerShape(14.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)) {
-                        Icon(if (template == ModTemplate.EMPTY) Icons.Outlined.Extension else Icons.Outlined.Code, null, modifier = Modifier.padding(12.dp).size(24.dp))
-                    }
-                    Spacer(Modifier.width(12.dp))
-                    Column(Modifier.weight(1f)) {
-                        Text(template.label, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                        Text(template.description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                    Icon(Icons.Outlined.Add, contentDescription = "Gunakan template")
-                }
-            }
+    if (files.isEmpty()) {
+        Column(Modifier.fillMaxSize().padding(24.dp), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
+            Icon(if (showAll) Icons.Outlined.Code else Icons.Outlined.Description, contentDescription = null, modifier = Modifier.size(42.dp), tint = MaterialTheme.colorScheme.primary)
             Spacer(Modifier.height(10.dp))
+            Text(if (showAll) "Tidak ada file kode" else "Belum ada asset tambahan", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+            Text(if (showAll) "Template ini belum mempunyai file yang bisa diedit." else "Resource seperti JSON, lang dan texture akan tampil di sini.", color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
-        Card(shape = RoundedCornerShape(18.dp)) {
-            Text("Catatan: contoh kode Item, Block, dan Command saat ini dibuat khusus untuk Fabric 1.21.1. Profile Forge/NeoForge menghasilkan starter class dan konfigurasi build.", Modifier.padding(14.dp), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        return
+    }
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Text(if (showAll) "File project" else "Resource & assets", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(horizontal = 6.dp, vertical = 4.dp))
+        files.forEach { path ->
+            OutlinedCard(Modifier.fillMaxWidth().clickable { controller.openEditor(path) }) {
+                Row(Modifier.padding(horizontal = 12.dp, vertical = 11.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Outlined.Description, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                    Spacer(Modifier.width(10.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text(File(path).name, fontWeight = FontWeight.Medium)
+                        Text(path, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                    }
+                    Text("›", fontSize = 24.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
         }
     }
 }
 
 @Composable
-private fun SettingsScreen(darkTheme: Boolean, onDarkThemeChange: (Boolean) -> Unit) {
-    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp)) {
-        Text("Settings", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
-        Spacer(Modifier.height(14.dp))
-        Card(shape = RoundedCornerShape(22.dp)) {
-            Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.weight(1f)) {
-                    Text("Dark theme", style = MaterialTheme.typography.titleMedium)
-                    Text("Gunakan tema gelap untuk UI editor.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-                Switch(checked = darkTheme, onCheckedChange = onDarkThemeChange)
-            }
-        }
+private fun FeatureComingSection(icon: String, title: String, milestone: String, body: String) {
+    Column(Modifier.fillMaxSize().padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+        Text(icon, color = MaterialTheme.colorScheme.primary, fontSize = 44.sp)
         Spacer(Modifier.height(10.dp))
-        Card(shape = RoundedCornerShape(22.dp)) {
-            Column(Modifier.padding(16.dp)) {
-                Text("Penyimpanan", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                Text("Project disimpan di storage privat aplikasi. Gunakan Export ZIP untuk memindahkan source ke GitHub atau komputer.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
+        Spacer(Modifier.height(6.dp))
+        TinyChip(milestone)
+        Spacer(Modifier.height(12.dp))
+        Text(body, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+}
+
+@Composable
+private fun BuildSection(controller: ModForgeController, project: ModProject) {
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        OutlinedCard(Modifier.fillMaxWidth()) {
+            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Outlined.Build, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(28.dp))
+                    Spacer(Modifier.width(10.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text("Remote build", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
+                        Text("${project.modId} · Java ${project.javaVersion}", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
+                    }
+                }
+                Text(controller.buildStatus, style = MaterialTheme.typography.bodyMedium)
+                if (controller.busy) {
+                    androidx.compose.material3.LinearProgressIndicator(Modifier.fillMaxWidth())
+                    OutlinedButton(onClick = controller::cancelBuild, modifier = Modifier.fillMaxWidth()) { Text("Batalkan pemantauan") }
+                } else {
+                    Button(onClick = controller::startBuild, modifier = Modifier.fillMaxWidth().height(50.dp)) {
+                        Icon(Icons.Outlined.PlayArrow, null); Spacer(Modifier.width(8.dp)); Text(if (project.repoOwner.isBlank()) "Buat repo & Build" else "Build ulang")
+                    }
+                }
+                Text("Build memakai GitHub Actions. Source file akan disinkronkan ke repo ${if (project.repoOwner.isBlank()) "baru" else "${project.repoOwner}/${project.repoName}"}.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                if (controller.lastBuildUrl.isNotBlank()) {
+                    OutlinedButton(onClick = { controller.openUrl(controller.lastBuildUrl) }, modifier = Modifier.fillMaxWidth()) { Icon(Icons.Outlined.OpenInNew, null); Spacer(Modifier.width(8.dp)); Text("Buka log di GitHub") }
+                }
+                if (controller.lastArtifactPath.isNotBlank()) {
+                    Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant), modifier = Modifier.fillMaxWidth()) {
+                        Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Outlined.CheckCircle, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                            Spacer(Modifier.width(8.dp))
+                            Column(Modifier.weight(1f)) {
+                                Text(File(controller.lastArtifactPath).name, fontWeight = FontWeight.SemiBold)
+                                Text("JAR tersimpan di data aplikasi", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                            TextButton(onClick = controller::shareArtifact) { Text("Bagikan") }
+                        }
+                    }
+                }
             }
         }
-        Spacer(Modifier.height(10.dp))
-        Card(shape = RoundedCornerShape(22.dp)) {
-            Column(Modifier.padding(16.dp)) {
-                Text("Tentang", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                Text("ModForge Studio · 0.1.0 · dibuat oleh sally", color = MaterialTheme.colorScheme.onSurfaceVariant)
+        if (controller.buildLog.isNotEmpty()) {
+            Text("Aktivitas build", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+            Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant), modifier = Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    controller.buildLog.takeLast(24).forEach { line ->
+                        Text("› $line", fontFamily = FontFamily.Monospace, fontSize = 12.sp)
+                    }
+                }
             }
         }
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun RoadmapFeatureScreen(icon: androidx.compose.ui.graphics.vector.ImageVector, title: String, description: String, bullets: List<String>) {
-    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-        Spacer(Modifier.height(28.dp))
-        Card(shape = RoundedCornerShape(28.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)) {
-            Icon(icon, contentDescription = null, modifier = Modifier.padding(24.dp).size(56.dp), tint = MaterialTheme.colorScheme.onSecondaryContainer)
-        }
-        Spacer(Modifier.height(18.dp))
-        Text(title, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-        Spacer(Modifier.height(8.dp))
-        Text(description, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Spacer(Modifier.height(22.dp))
-        Card(shape = RoundedCornerShape(20.dp)) {
-            Column(Modifier.padding(16.dp)) {
-                Text("Rencana implementasi", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                Spacer(Modifier.height(8.dp))
-                bullets.forEachIndexed { index, bullet -> InfoRow((index + 1).toString(), bullet) }
-            }
-        }
-    }
-}
-
-@Composable
-private fun CreateProjectDialog(initialTemplate: ModTemplate, onDismiss: () -> Unit, onCreate: (ModProject) -> Unit) {
-    var step by rememberSaveable { mutableStateOf(0) }
-    var loader by rememberSaveable { mutableStateOf(ModLoader.FABRIC) }
-    var minecraftVersion by rememberSaveable { mutableStateOf("1.21.1") }
-    var name by rememberSaveable { mutableStateOf("") }
-    var modId by rememberSaveable { mutableStateOf("") }
-    var packageName by rememberSaveable { mutableStateOf("com.example.examplemod") }
-    var modVersion by rememberSaveable { mutableStateOf("1.0.0") }
-    var author by rememberSaveable { mutableStateOf("sally") }
-    var description by rememberSaveable { mutableStateOf("A Minecraft Java mod") }
-    var license by rememberSaveable { mutableStateOf("MIT") }
-    var template by rememberSaveable { mutableStateOf(initialTemplate) }
-    var error by remember { mutableStateOf<String?>(null) }
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = {
-            Column {
-                Text("Project baru", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-                Text("Langkah ${step + 1} dari 4", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
+private fun EditorScreen(controller: ModForgeController, snackbar: SnackbarHostState) {
+    Scaffold(
+        containerColor = MaterialTheme.colorScheme.background,
+        topBar = {
+            TopAppBar(
+                title = {
+                    Column {
+                        Text(File(controller.editingPath).name, maxLines = 1, overflow = TextOverflow.Ellipsis, fontWeight = FontWeight.SemiBold)
+                        Text(controller.editingPath, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    }
+                },
+                navigationIcon = { IconButton(onClick = { controller.saveEditor(); controller.page = AppPage.Project; controller.projectSection = ProjectSection.Code }) { Icon(Icons.Outlined.ArrowBack, contentDescription = "Kembali ke file") } },
+                actions = { TextButton(onClick = controller::saveEditor) { Text("Simpan") } },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background)
+            )
         },
-        text = {
-            Column(Modifier.fillMaxWidth().height(420.dp).verticalScroll(rememberScrollState())) {
-                when (step) {
-                    0 -> {
-                        Text("Loader & versi Minecraft", fontWeight = FontWeight.SemiBold)
-                        Spacer(Modifier.height(10.dp))
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            ModLoader.entries.forEach { option ->
-                                FilterChip(selected = loader == option, onClick = {
-                                    loader = option
-                                    minecraftVersion = when (option) { ModLoader.FABRIC -> "1.21.1"; ModLoader.FORGE -> "1.20.1"; ModLoader.NEOFORGE -> "1.21.1" }
-                                }, label = { Text(option.label) })
-                            }
-                        }
-                        Spacer(Modifier.height(14.dp))
-                        Text("Contoh versi yang diprofilkan", style = MaterialTheme.typography.labelLarge)
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            val versions = when (loader) {
-                                ModLoader.FABRIC -> listOf("1.21.1", "1.20.1", "1.19.2")
-                                ModLoader.FORGE -> listOf("1.20.1", "1.19.2", "1.18.2")
-                                ModLoader.NEOFORGE -> listOf("1.21.1", "1.21.4", "1.20.4")
-                            }
-                            versions.forEach { version -> FilterChip(selected = minecraftVersion == version, onClick = { minecraftVersion = version }, label = { Text(version) }) }
-                        }
-                        Spacer(Modifier.height(8.dp))
-                        OutlinedTextField(value = minecraftVersion, onValueChange = { minecraftVersion = it.trim() }, modifier = Modifier.fillMaxWidth(), label = { Text("Versi Minecraft") }, singleLine = true)
-                        Spacer(Modifier.height(8.dp))
-                        Text("Java: ${recommendedJava(minecraftVersion)} (rekomendasi awal; wajib diverifikasi untuk kombinasi loader/versi ini).", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                    1 -> {
-                        Text("Info mod", fontWeight = FontWeight.SemiBold)
-                        Spacer(Modifier.height(8.dp))
-                        OutlinedTextField(name, { value -> name = value; val generated = normalizeModId(value); modId = generated; packageName = "com.${normalizeModId(author.ifBlank { "example" })}.$generated" }, label = { Text("Nama mod") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-                        OutlinedTextField(modId, { modId = normalizeModId(it) }, label = { Text("Mod ID") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-                        OutlinedTextField(packageName, { packageName = normalizePackage(it) }, label = { Text("Java package") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-                        OutlinedTextField(modVersion, { modVersion = it }, label = { Text("Versi mod") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-                        OutlinedTextField(author, { author = it }, label = { Text("Author") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-                        OutlinedTextField(description, { description = it }, label = { Text("Deskripsi") }, modifier = Modifier.fillMaxWidth(), minLines = 2)
-                        OutlinedTextField(license, { license = it }, label = { Text("Lisensi") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-                    }
-                    2 -> {
-                        Text("Build configuration", fontWeight = FontWeight.SemiBold)
-                        Spacer(Modifier.height(8.dp))
-                        Text("Java ${recommendedJava(minecraftVersion)}", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                        Text("Gradle akan ditentukan oleh template loader. Saat ini tidak ada JDK atau Gradle yang dijalankan di HP; file workflow disiapkan untuk GitHub Actions.")
-                        Spacer(Modifier.height(12.dp))
-                        Card(shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)) {
-                            Column(Modifier.padding(14.dp)) {
-                                Text("Belum terhubung ke GitHub", fontWeight = FontWeight.SemiBold)
-                                Text("Project akan dibuat secara lokal. Setelah diekspor, unggah ke GitHub lalu jalankan workflow build.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            }
-                        }
-                    }
-                    else -> {
-                        Text("Pilih template", fontWeight = FontWeight.SemiBold)
-                        Spacer(Modifier.height(8.dp))
-                        ModTemplate.entries.forEach { option ->
-                            Card(
-                                onClick = { template = option },
-                                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-                                shape = RoundedCornerShape(16.dp),
-                                colors = CardDefaults.cardColors(containerColor = if (template == option) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surface)
-                            ) {
-                                Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                                    Icon(if (template == option) Icons.Outlined.CheckCircle else Icons.Outlined.Extension, null)
-                                    Spacer(Modifier.width(10.dp))
-                                    Column(Modifier.weight(1f)) {
-                                        Text(option.label, fontWeight = FontWeight.SemiBold)
-                                        Text(option.description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                    }
-                                }
-                            }
-                        }
-                        Spacer(Modifier.height(12.dp))
-                        Text("Ringkasan", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
-                        Text("$name · ${loader.label} · Minecraft $minecraftVersion · ${template.label}", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                }
-                if (error != null) {
-                    Spacer(Modifier.height(8.dp))
-                    Text(error!!, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
-                }
+        snackbarHost = { SnackbarHost(snackbar) }
+    ) { padding ->
+        Column(Modifier.fillMaxSize().padding(padding).padding(horizontal = 12.dp, vertical = 8.dp)) {
+            Card(Modifier.fillMaxSize(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
+                OutlinedTextField(
+                    value = controller.editorContent,
+                    onValueChange = { controller.editorContent = it },
+                    modifier = Modifier.fillMaxSize().padding(8.dp),
+                    textStyle = androidx.compose.ui.text.TextStyle(fontFamily = FontFamily.Monospace, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurface, lineHeight = 20.sp),
+                    keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.None),
+                    placeholder = { Text("Isi file…", fontFamily = FontFamily.Monospace) }
+                )
             }
-        },
-        confirmButton = {
-            if (step < 3) {
-                Button(onClick = {
-                    error = when (step) {
-                        0 -> if (minecraftVersion.matches(Regex("\\d+\\.\\d+(\\.\\d+)?"))) null else "Format versi tidak valid. Contoh: 1.21.1"
-                        1 -> if (name.isBlank() || modId.isBlank() || packageName.isBlank()) "Isi nama mod, ID, dan package terlebih dahulu." else null
-                        else -> null
-                    }
-                    if (error == null) step++
-                }) { Text("Lanjut") }
-            } else {
-                Button(onClick = {
-                    if (name.isBlank() || modId.isBlank() || packageName.isBlank()) {
-                        error = "Lengkapi nama, mod ID, dan package."
-                    } else {
-                        onCreate(ModProject(name = name.trim(), modId = modId, packageName = packageName, modVersion = modVersion.ifBlank { "1.0.0" }, author = author.trim(), description = description.trim(), license = license.ifBlank { "MIT" }, loader = loader, minecraftVersion = minecraftVersion, template = template))
-                    }
-                }) { Icon(Icons.Outlined.Add, null); Spacer(Modifier.width(5.dp)); Text("Buat") }
-            }
-        },
-        dismissButton = {
-            Row {
-                TextButton(onClick = { if (step > 0) { step--; error = null } else onDismiss() }) { Text(if (step > 0) "Kembali" else "Batal") }
-            }
+            Spacer(Modifier.height(6.dp))
+            Text("Editor dasar · syntax highlighting, autocomplete dan quick-fix masuk milestone M3.", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
-    )
-}
-
-private fun normalizeModId(input: String): String = input.lowercase()
-    .replace(Regex("[^a-z0-9_]+"), "_")
-    .trim('_')
-    .ifBlank { "example_mod" }
-
-private fun normalizePackage(input: String): String = input.lowercase()
-    .replace(Regex("[^a-z0-9_.]"), "")
-    .split('.')
-    .filter { it.isNotBlank() }
-    .joinToString(".") { part -> if (part.first().isDigit()) "_${part}" else part }
-    .ifBlank { "com.example.examplemod" }
-
-private fun recommendedJava(version: String): Int = when {
-    version.startsWith("1.16") -> 8
-    version.startsWith("1.17") -> 16
-    version.startsWith("1.18") || version.startsWith("1.19") || version.startsWith("1.20.1") || version.startsWith("1.20.2") || version.startsWith("1.20.3") || version.startsWith("1.20.4") -> 17
-    else -> 21
-}
-
-private fun shareProjectZip(context: Context, repository: ProjectRepository, project: ModProject) {
-    runCatching {
-        val exports = File(context.cacheDir, "exports").apply { mkdirs() }
-        val zip = File(exports, "${project.modId}-${project.minecraftVersion}.zip")
-        repository.exportZip(project.id, zip)
-        val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", zip)
-        val intent = Intent(Intent.ACTION_SEND).apply {
-            type = "application/zip"
-            putExtra(Intent.EXTRA_STREAM, uri)
-            putExtra(Intent.EXTRA_SUBJECT, "${project.name} source ZIP")
-            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-        }
-        context.startActivity(Intent.createChooser(intent, "Ekspor project"))
-    }.onFailure { error ->
-        Toast.makeText(context, "Ekspor gagal: ${error.message ?: "kesalahan tidak diketahui"}", Toast.LENGTH_LONG).show()
     }
 }

@@ -1,41 +1,73 @@
-# ModForge Studio
+# ModForge Android
 
-Android-first starter app for creating Minecraft Java mod projects. UI and initial feature scope follow the provided `PRD.md`, `PLAN.md`, `DESIGN.md`, and `ROADMAP.md`.
+ModForge adalah fondasi IDE Android untuk membuat mod Minecraft Java Edition berbasis Fabric. Fokus build awal: buat project, edit file teks dasar, sinkronkan ke GitHub, jalankan GitHub Actions, lalu unduh JAR kembali ke perangkat.
 
-## Current starter features
+> **Status rilis:** fondasi MVP 0.1.0. Ini belum rilis penuh sesuai seluruh PRD. Editor syntax-aware/autocomplete, diagnostics klik-ke-baris, node scripting, editor 3D dan texture painter belum diimplementasikan.
 
-- Material 3, portrait-first UI with dynamic color and a dark-theme toggle.
-- Four main destinations: Projects, GitHub & Build, Templates, Settings.
-- Four-step project creation wizard for loader, Minecraft version, mod metadata, and starter template.
-- Local project storage isolated in the app's private storage.
-- Fabric starter templates for Empty, Item, Block and Command, plus starter structures for Forge and NeoForge.
-- Basic file explorer/editor with manual local save.
-- Export a project as ZIP using Android's share sheet.
-- Per-mod GitHub Actions workflow template which builds and uploads a `.jar` artifact.
-- GitHub Actions workflow in this repository to build the Android debug APK.
+## Yang sudah ada
 
-## Important limitations of this first implementation
+- UI Jetpack Compose + Material 3, tema terang/gelap, aksen hijau `#3DDC84`.
+- Daftar project lokal, wizard project, konfigurasi Minecraft/Java/Gradle per project.
+- Generator project Fabric untuk template Empty, Item, Block, Item + Block, dan Event.
+- Editor teks dasar untuk file Java, JSON, Gradle, YAML dan file project lain.
+- GitHub OAuth Device Flow yang bisa dikonfigurasi menggunakan OAuth Client ID penerbit aplikasi; alternatif Personal Access Token.
+- Token GitHub dienkripsi menggunakan AES-GCM dengan kunci Android Keystore.
+- Pembuatan repository, pengiriman file melalui Git Data API, pemantauan Actions, pengunduhan artefak JAR, dan menu share.
+- GitHub Actions workflow untuk membuild APK Android dan mengunggah artifact.
 
-This is a buildable starter, not the complete application described in the PRD. GitHub OAuth/Device Flow, repository creation, push-on-build, run polling, remote logs, and automatic artifact download are not implemented in the Android UI yet. Visual scripting and the 3D model editor are roadmap screens. No fake success state is shown for these features.
+## Build APK di GitHub Actions
 
-The project generator pins initial example profiles for Fabric 1.21.1, Forge 1.20.1, and NeoForge 1.21.1. Other versions produce a warning because loader/plugin/mappings/API coordinates must be verified before a reliable build. For the most dependable first test, choose Fabric 1.21.1 and the Item template. Check current official loader docs before publishing a mod.
+1. Buat repository GitHub baru lalu upload seluruh isi project ini ke branch `main`.
+2. Buka tab **Actions** dan aktifkan workflow bila GitHub meminta persetujuan.
+3. Jalankan workflow **Build ModForge APK** atau push commit ke `main`.
+4. Setelah sukses, buka artifact `modforge-debug-apk`, unduh ZIP artifact lalu ambil `app-debug.apk`.
 
-## Build APK in GitHub Actions
+Workflow menggunakan Gradle yang dipasang oleh `gradle/actions/setup-gradle`; jadi tidak membutuhkan `gradle-wrapper.jar` untuk build di Actions. File `gradlew` disertakan sebagai launcher ringan untuk lingkungan lokal dan akan menggunakan Gradle dari PATH atau mengunduh distribusi yang ditentukan di `gradle/wrapper/gradle-wrapper.properties`.
 
-1. Push this folder to a GitHub repository.
-2. Open the **Actions** tab and run **Build ModForge Studio APK** (or push a commit).
-3. Download `ModForgeStudio-debug-apk` from the workflow run artifacts.
+## Build lokal
 
-The workflow installs Gradle 8.13 directly, so the repository does not need a checked-in Gradle wrapper JAR for CI.
+Dibutuhkan JDK 17 dan Android SDK platform 37. Jalankan:
 
-## Open in Android Studio
+```bash
+./gradlew :app:assembleDebug
+```
 
-Use a recent Android Studio with Android SDK Platform 36 and JDK 17. This starter intentionally does not check in a Gradle wrapper JAR; CI installs Gradle 8.13 directly. In a local terminal with Gradle 8.13 available, run `gradle :app:assembleDebug`. The first build needs network access to download dependencies.
+APK debug akan berada di `app/build/outputs/apk/debug/app-debug.apk`.
 
-## Project persistence and export
+## Mengaktifkan GitHub OAuth Device Flow
 
-Project source files are stored in app-private storage under `files/modforge/projects/`. Export ZIP excludes internal `project.json` metadata. Exported projects include `.github/workflows/build.yml` and can be uploaded to a repository manually.
+Device Flow memerlukan OAuth App terdaftar dan opsi Device Flow aktif. Penerbit aplikasi perlu membuat OAuth App GitHub, kemudian memasukkan **Client ID** ke **Pengaturan → OAuth Device Flow** di aplikasi. Client ID adalah identifier publik, bukan client secret. Untuk aplikasi yang belum punya OAuth App sendiri, layar GitHub juga menyediakan jalur Personal Access Token.
 
-## Next implementation milestone
+Token klasik perlu scope `repo` dan `workflow` agar dapat membuat repository privat serta mengirim workflow ke repository. Untuk fine-grained token, pastikan izin repository/workflow yang diperlukan tersedia. Hindari menggunakan token dengan akses lebih luas dari yang diperlukan dan gunakan hanya pada perangkat pribadi.
 
-Implement GitHub Device Flow with a developer-configured OAuth client ID, encrypted token storage, create-repository + atomic Git Data API commits, build status polling, job log parsing, and artifact `.jar` download. Then add Room/DataStore, a proper code editor with syntax highlighting, version-profile packs, and tests for each supported loader/version pair.
+## Catatan versi Minecraft
+
+Matrix versi di UI mengikuti baseline PRD, tetapi rentang 1.16.5, 1.18.2 dan 26.3 ditandai eksperimental. Kombinasi Fabric Loom, mappings, Loader, Fabric API dan Java perlu diverifikasi lewat CI untuk masing-masing versi. Template paling cocok untuk pengujian awal adalah Minecraft 1.21.1 atau 1.20.1. Jangan menganggap semua kombinasi dalam matrix sudah lulus build hanya karena dapat dipilih dari dropdown.
+
+## Struktur utama
+
+```text
+app/src/main/java/com/sally/modforge/
+  data/       # model project, penyimpanan lokal, controller
+  core/       # generator template Fabric
+  github/     # OAuth, token vault, GitHub REST/Git Data/Actions
+  ui/         # Compose UI, tema
+.github/workflows/android.yml
+```
+
+## Keamanan & privasi
+
+- Source project disimpan pada direktori privat aplikasi sampai user memilih untuk build/sync ke GitHub.
+- Token tidak ditulis ke file project, log build atau repository.
+- Repository baru default-nya private.
+- Menghapus token dari perangkat tidak otomatis mencabut izin OAuth di GitHub; cabut izin juga di GitHub Settings jika diperlukan.
+
+## Lisensi
+
+Kode fondasi ini disediakan untuk pengembangan pribadi dan dapat diubah sesuai kebutuhan. Template mod menghasilkan proyek Fabric; tetap periksa lisensi dependency dan ketentuan layanan GitHub yang digunakan.
+
+## Validasi source
+
+Generator template sudah diuji untuk contoh 1.21.1 Item + Block, 1.20.1 Event, 1.18.2 Block, dan 26.3 Empty; JSON yang dihasilkan lolos parsing. APK Android penuh belum dikompilasi di lingkungan pembuat source ini, sehingga workflow **Build ModForge APK** harus menjadi verifikasi kompilasi berikutnya. Status build mod Fabric sendiri tetap bergantung pada kompatibilitas dependency tiap versi dan diverifikasi saat workflow project dijalankan.
+
+Dokumen sumber produk ada di `docs/specs/` (`PRD.md`, `PLAN.md`, `DESIGN.md`, `ROADMAP.md`).

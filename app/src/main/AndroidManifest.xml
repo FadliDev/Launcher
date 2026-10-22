@@ -1,12 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-permission android:name="android.permission.INTERNET" />
+
     <application
-        android:allowBackup="true"
-        android:label="ModForge Studio"
-        android:icon="@drawable/ic_launcher"
-        android:roundIcon="@drawable/ic_launcher"
+        android:allowBackup="false"
+        android:label="ModForge"
+        android:icon="@drawable/ic_modforge"
         android:supportsRtl="true"
-        android:theme="@style/Theme.ModForgeStudio">
+        android:theme="@style/Theme.ModForge"
+        android:usesCleartextTraffic="false">
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"
@@ -17,7 +19,8 @@
                 android:resource="@xml/file_paths" />
         </provider>
         <activity
-            android:name="com.sally.modforge.MainActivity"
+            android:name=".MainActivity"
+            android:configChanges="uiMode|screenSize|orientation"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

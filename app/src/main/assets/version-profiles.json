@@ -1,6 +1,0 @@
-[
- {"mc":"1.21.1","loader":"FABRIC","java":21,"gradle":"8.10.2","loaderVersion":"0.16.9","pluginVersion":"1.7-SNAPSHOT","apiVersion":"0.105.0+1.21.1"},
- {"mc":"1.20.1","loader":"FABRIC","java":17,"gradle":"8.8","loaderVersion":"0.16.9","pluginVersion":"1.7-SNAPSHOT","apiVersion":"0.92.2+1.20.1"},
- {"mc":"1.18.2","loader":"FABRIC","java":17,"gradle":"8.8","loaderVersion":"0.16.9","pluginVersion":"1.7-SNAPSHOT","apiVersion":"0.77.0+1.18.2"},
- {"mc":"1.20.1","loader":"FORGE","java":17,"gradle":"8.8","loaderVersion":"47.3.0","pluginVersion":"[6.0,6.2)"}
-]
