@@ -1,3 +1,1 @@
--keep class org.eclipse.tm4e.** { *; }
--keep class org.joni.** { *; }
--keep class io.github.rosemoe.sora.** { *; }
+-dontwarn **
