@@ -45,14 +45,14 @@ Tujuan: pastikan ide ini feasible sebelum bangun UI besar.
 **Rilis:** `v0.1` — editor teks yang enak dipakai.
 
 ## Fase 2 — Proyek & file explorer (2–3 minggu)
-- [ ] Buka folder proyek (SAF atau storage app)
-- [ ] Sidebar tree file explorer + icon per tipe file
-- [ ] Buat/rename/hapus/duplikat/pindah, multi-select
-- [ ] Pencarian file (fuzzy) + cari teks seluruh proyek
-- [ ] Import/export zip
-- [ ] Proyek terakhir, workspace restore (tab terbuka)
-- [ ] Layout adaptif: HP, tablet, landscape
-- [ ] Template proyek (Android Kotlin, Java, Fabric dulu)
+- [~] Buka folder proyek — **storage app saja** (proyek = subfolder `workspace/`); buka folder bebas via SAF belum
+- [~] Sidebar tree file explorer + icon per tipe file
+- [~] Buat/rename/hapus/duplikat (pindah & multi-select belum)
+- [~] Pencarian file (fuzzy) + cari teks seluruh proyek
+- [~] Import/export zip (SAF)
+- [~] Daftar proyek terakhir, workspace restore (tab terbuka)
+- [~] Layout adaptif: HP (drawer) / tablet & landscape lebar (pane tetap)
+- [~] Template proyek (Android Kotlin, Android Java, Fabric, Kosong)
 
 **Rilis:** `v0.2`.
 

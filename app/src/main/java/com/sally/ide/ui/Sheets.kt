@@ -1,6 +1,7 @@
 package com.sally.ide.ui
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -28,10 +29,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import com.sally.ide.APP_VERSION
 import com.sally.ide.CrashLog
 import com.sally.ide.data.Prefs
 import com.sally.ide.data.ThemeMode
@@ -66,9 +68,9 @@ fun SettingsSheet(
 ) {
     ModalBottomSheet(onDismissRequest = onDismiss) {
         Column(Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 8.dp)) {
-            Text("Pengaturan", style = MaterialTheme.typography.titleMedium)
+            Text("Setelan", style = MaterialTheme.typography.titleMedium)
             Text("Tema", Modifier.padding(top = 12.dp), style = MaterialTheme.typography.labelLarge)
-            Row(Modifier.padding(top = 4.dp), horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(6.dp)) {
+            Row(Modifier.padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 ThemeMode.entries.forEach { m ->
                     FilterChip(selected = prefs.themeMode == m, onClick = { onTheme(m) }, label = { Text(m.label) })
                 }
@@ -76,15 +78,19 @@ fun SettingsSheet(
             SwitchRow("Warna dinamis (Material You)", prefs.dynamicColor, onDynamic)
             Text("Ukuran font editor: ${prefs.fontSize.toInt()} sp", Modifier.padding(top = 8.dp), style = MaterialTheme.typography.labelLarge)
             Slider(value = prefs.fontSize, onValueChange = { onFont(it.toInt().toFloat()) }, valueRange = 10f..24f, steps = 13)
-            val ctx = LocalContext.current
-            var safe by remember { mutableStateOf(CrashLog.isSafe(ctx)) }
-            SwitchRow("Mode aman: tanpa highlight (mulai ulang app)", safe) { safe = it; CrashLog.setSafe(ctx, it) }
             SwitchRow("Word wrap", prefs.wordWrap, onWrap)
             SwitchRow("Nomor baris", prefs.lineNumbers, onLines)
             Text("Lebar tab: ${prefs.tabSize} spasi", Modifier.padding(top = 8.dp), style = MaterialTheme.typography.labelLarge)
-            Row(Modifier.padding(top = 4.dp, bottom = 24.dp), horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(6.dp)) {
+            Row(Modifier.padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 listOf(2, 4, 8).forEach { n -> FilterChip(selected = prefs.tabSize == n, onClick = { onTab(n) }, label = { Text("$n") }) }
             }
+            val ctx = LocalContext.current
+            var safe by remember { mutableStateOf(CrashLog.isSafe(ctx)) }
+            SwitchRow("Mode aman: tanpa highlight (mulai ulang app)", safe) { safe = it; CrashLog.setSafe(ctx, it) }
+            Text(
+                "Sally IDE v$APP_VERSION", Modifier.padding(top = 12.dp, bottom = 24.dp),
+                style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
     }
 }
@@ -98,8 +104,11 @@ private fun SwitchRow(label: String, value: Boolean, onChange: (Boolean) -> Unit
 }
 
 @Composable
-fun TextInputDialog(title: String, hint: String, numeric: Boolean = false, onConfirm: (String) -> Unit, onDismiss: () -> Unit) {
-    var v by remember { mutableStateOf("") }
+fun TextInputDialog(
+    title: String, hint: String, initial: String = "", numeric: Boolean = false,
+    onConfirm: (String) -> Unit, onDismiss: () -> Unit,
+) {
+    var v by remember { mutableStateOf(initial) }
     AlertDialog(
         onDismissRequest = onDismiss, title = { Text(title) },
         text = {
@@ -109,6 +118,15 @@ fun TextInputDialog(title: String, hint: String, numeric: Boolean = false, onCon
             )
         },
         confirmButton = { TextButton(onClick = { onConfirm(v) }) { Text("OK") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Batal") } },
+    )
+}
+
+@Composable
+fun ConfirmDialog(title: String, text: String, confirmLabel: String, onConfirm: () -> Unit, onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss, title = { Text(title) }, text = { Text(text) },
+        confirmButton = { TextButton(onClick = onConfirm) { Text(confirmLabel) } },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Batal") } },
     )
 }

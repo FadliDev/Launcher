@@ -5,13 +5,13 @@ File ini dicatat ulang **setiap ada update**. Entri terbaru di atas (bagian *Log
 Legenda: ✅ terverifikasi di perangkat · 🟡 kode ditulis, belum dikompilasi/diuji · ⬜ belum dikerjakan
 
 ## Status saat ini
-**Versi:** v0.1.0 (Fase 1 — Editor dasar) · **Status build:** 🟡 v0.1.1 lolos kompilasi, tapi v0.1.3 memperbaiki 2 crash startup dari stack trace; menunggu uji ulang di perangkat
+**Versi:** v0.2.0 (UI dirombak + Fase 2) · **Status build:** 🟡 v0.2.0 ditulis tanpa kompilator (sandbox tidak bisa unduh Android SDK/dependensi). Crash startup dari v0.1.3 (tm4e/Java 11 API) **belum terbukti beres** — butuh uji di perangkat
 
 | Fase | Isi | Status |
 |---|---|---|
 | 0 | Spike & validasi (JDK/Gradle/aapt2 di HP) | ⬜ perlu perangkat nyata |
 | 1 | Editor dasar (MVP) | 🟡 ~85% kode ditulis, menunggu build pertama |
-| 2 | Proyek & file explorer | ⬜ (explorer minimal sudah ada di Fase 1) |
+| 2 | Proyek & file explorer | 🟡 kode ditulis di v0.2.0 (lihat rincian Fase 2) |
 | 3 | SDK & toolchain manager | ⬜ |
 | 4 | Build Gradle | ⬜ |
 | 5 | Intelligence & LSP | ⬜ |
@@ -36,10 +36,26 @@ Legenda: ✅ terverifikasi di perangkat · 🟡 kode ditulis, belum dikompilasi/
 | Tema: light/dark/AMOLED + dynamic color | 🟡 | Tema editor Dark+/AMOLED/Light+ ikut mode app |
 | Explorer minimal | 🟡 | Tree workspace + file baru. Rename/hapus/pindah/icon per tipe = Fase 2 |
 
+## Fase 2 — rincian (v0.2.0)
+| Item | Status | Catatan |
+|---|---|---|
+| Daftar proyek (Beranda) | 🟡 | Proyek = subfolder `Android/data/com.sally.ide/files/workspace/<nama>`. Urut berdasar terakhir dibuka |
+| Template proyek | 🟡 | Android Kotlin (Compose), Android Java, Mod Fabric, Kosong (`data/Templates.kt`). **Fabric: versi Loom/Loader/API sengaja berisi `ISI_...`**, isi dari fabricmc.net/develop |
+| Explorer + icon per tipe | 🟡 | Ikon + warna aksen per ekstensi (`ui/AppIcons.kt`); folder `build/.gradle/.git` diredupkan |
+| Buat/rename/hapus/duplikat | 🟡 | Tekan lama baris → menu. Tab ikut berganti nama / tertutup saat file dihapus |
+| Pencarian | 🟡 | Overlay: nama file (fuzzy) dan isi teks (≤1 MB/file, maks 200 hasil); klik hasil lompat ke baris |
+| Impor/ekspor zip | 🟡 | SAF (tanpa izin storage). Impor membuang folder induk tunggal & menolak zip-slip. Ekspor tanpa `build/` dan `.gradle/` |
+| Restore tab | 🟡 | Tab terbuka + tab aktif disimpan per proyek (DataStore) saat app ke background / tutup proyek |
+| Layout adaptif | 🟡 | ≥720dp lebar: explorer jadi pane tetap 300dp; di bawah itu: drawer |
+| Buka folder bebas (SAF) | ⬜ | Perlu lapisan abstraksi file (DocumentFile); ditunda |
+| Pindah file / multi-select / drag-drop | ⬜ | |
+| Migrasi v0.1 | 🟡 | File lepas di `workspace/` otomatis dipindah ke proyek `Workspace-lama` |
+
 ## Keputusan & penyimpangan dari dokumen
 - Single-module dulu (PLAN §3 menyarankan multi-module).
 - Completion lewat SuggestionBar, bukan popup Sora (lebih sedikit API Sora yang dipakai dan tidak menutupi editor di layar kecil).
-- Workspace: `Android/data/com.sally.ide/files/workspace` (storage app, tanpa izin storage). SAF/buka folder bebas = Fase 2.
+- Workspace: `Android/data/com.sally.ide/files/workspace` (storage app, tanpa izin storage). Buka folder bebas via SAF masih ditunda (lihat Fase 2).
+- UI dirombak di v0.2.0 demi ringan & sederhana: tanpa bottom navigation bar dan status bar terpisah (info Ln/Col pindah ke subjudul top bar), Undo/Redo pindah ke key row, hanya 2 layar (Beranda, Editor), semua ikon lewat satu file `ui/AppIcons.kt`.
 - Font editor: monospace sistem dulu (JetBrains Mono perlu aset font; belum ditambahkan).
 - Teks UI sementara hard-coded Bahasa Indonesia; ekstraksi ke strings.xml ID/EN di Fase 7.
 - Gradle wrapper **jar tidak disertakan** (tidak bisa diunduh di sandbox). Jalankan `gradle wrapper` sekali, atau pakai `gradle assembleDebug` langsung.
@@ -57,14 +73,21 @@ Kode ditulis dari pengetahuan API Sora-editor 0.23.x tanpa bisa dikompilasi. Tit
 1. `EditorRuntime.kt` — nama paket/kelas TextMate (`ThemeModel`, `AssetsFileResolver`, `TextMateColorScheme.create`)
 2. `CodeEditorView.kt` — `EditorSearcher.SearchOptions(...)`, `replaceCurrentMatch`, `subscribeEvent`, `getComponent(EditorAutoCompletion)`, `moveSelectionHome/End`
 3. Versi library (AGP 8.7.3 / Kotlin 2.0.21 / Compose BOM 2024.10.01) bila Termux Gradle-nya beda
-4. Nama ikon `material-icons-extended`
+4. Nama ikon `material-icons-extended` — semua dirujuk lewat `object Ic` di `ui/AppIcons.kt`; kalau ada yang tidak ditemukan, ganti satu baris di sana
+5. v0.2.0 (kode baru, belum dikompilasi): `rememberLauncherForActivityResult` + `CreateDocument(mime)` (Root.kt), `combinedClickable` (Explorer.kt), `VerticalDivider` (EditorScreen.kt)
 
 ## Berikutnya
-1. Build pertama + perbaiki error kompilasi
-2. Uji di perangkat: highlight, tab, snippet, find/replace, tema
+1. Build via CI + perbaiki error kompilasi v0.2.0 (kirim log-nya)
+2. Uji di perangkat: crash startup v0.1.3 sudah beres?, lalu proyek baru, explorer, pencarian, zip, tema
 3. Kalau stabil → rilis `v0.1` lalu lanjut sesuai urutan cepat ROADMAP: **Fase 0 spike → Fase 3 → Fase 4** (build di HP)
 
 ## Log perubahan
+### 2026-10-22 — v0.2.0 (rombak UI + Fase 2)
+- UI baru, MD3 tetap (dynamic color, light/dark/AMOLED), lebih ringan: Beranda proyek (daftar, FAB proyek baru, impor zip), Editor (top bar ringkas, tab berikon, key row dengan Undo/Redo), explorer berikon, overlay pencarian
+- Fase 2: lihat tabel rincian di atas
+- Dihapus: `IdeScreen.kt`, `StatusBar`, `NavigationBar`, `Seed`
+- `EditorTab.file` jadi mutable (rename ikut memperbarui tab); `CodeEditorView.kt`, `EditorRuntime.kt`, completion, snippet **tidak diubah**
+- Tidak menyentuh dua perbaikan crash v0.1.3 (desugar 2.1.5 + `TabBar` buatan sendiri); mode aman tetap ada
 ### 2026-10-22 — v0.1.3 (2 crash dari stack trace)
 - **Crash 1 (thread AsyncAnalyzer):** `NoSuchMethodError ArrayList.toArray(IntFunction)` di tm4e → API Java 11 tidak ada di Android 10. Desugar library dinaikkan 2.0.4 → 2.1.5. *Belum terbukti*; kalau masih crash, fallback: highlight tanpa tm4e / mode aman
 - **Crash 2 (main):** `IndexOutOfBounds` di `ScrollableTabRow` M3 saat tab ke-2 dibuka → diganti tab strip buatan sendiri (`TabBar`)

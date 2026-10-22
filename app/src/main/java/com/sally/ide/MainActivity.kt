@@ -11,7 +11,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sally.ide.ui.CrashScreen
-import com.sally.ide.ui.IdeScreen
+import com.sally.ide.ui.SallyRoot
 import com.sally.ide.ui.SallyTheme
 
 class MainActivity : ComponentActivity() {
@@ -31,13 +31,13 @@ class MainActivity : ComponentActivity() {
                         onSafe = { CrashLog.setSafe(this, true); CrashLog.clear(this); crash = null },
                         onRetry = { CrashLog.setSafe(this, false); CrashLog.clear(this); crash = null },
                     )
-                } else IdeScreen(vm)
+                } else SallyRoot(vm)
             }
         }
     }
 
     override fun onStop() {
-        vm.saveAll() // auto-save saat app ke background
+        vm.onAppStop() // auto-save + simpan daftar tab saat app ke background
         super.onStop()
     }
 }

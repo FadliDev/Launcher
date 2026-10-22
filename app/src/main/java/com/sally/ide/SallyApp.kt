@@ -5,6 +5,8 @@ import android.content.Context
 import android.util.Log
 import java.io.File
 
+const val APP_VERSION = "0.2.0"
+
 class SallyApp : Application() {
     override fun onCreate() {
         super.onCreate()

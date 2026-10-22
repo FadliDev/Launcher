@@ -9,6 +9,7 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 
 private val Context.store by preferencesDataStore(name = "sally_ide_settings")
@@ -23,6 +24,9 @@ data class Prefs(
     val lineNumbers: Boolean = true,
     val tabSize: Int = 4,
 )
+
+/** Tab yang terbuka di sebuah proyek (path relatif) + indeks tab aktif. */
+data class Session(val paths: List<String>, val active: Int)
 
 object Keys {
     val THEME = stringPreferencesKey("theme_mode")
@@ -43,6 +47,16 @@ class SettingsRepo(private val ctx: Context) {
             lineNumbers = p[Keys.LINES] ?: true,
             tabSize = (p[Keys.TAB] ?: 4).coerceIn(2, 8),
         )
+    }
+
+    suspend fun loadSession(project: String): Session {
+        val raw = ctx.store.data.first()[stringPreferencesKey("session:$project")] ?: return Session(emptyList(), -1)
+        val lines = raw.split('\n')
+        return Session(lines.drop(1).filter { it.isNotBlank() }, lines.firstOrNull()?.toIntOrNull() ?: -1)
+    }
+
+    suspend fun saveSession(project: String, paths: List<String>, active: Int) {
+        ctx.store.edit { it[stringPreferencesKey("session:$project")] = (listOf(active.toString()) + paths).joinToString("\n") }
     }
 
     suspend fun edit(block: (MutablePreferences) -> Unit) {
