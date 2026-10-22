@@ -57,12 +57,12 @@ Tujuan: pastikan ide ini feasible sebelum bangun UI besar.
 **Rilis:** `v0.2`.
 
 ## Fase 3 — SDK & toolchain manager (2–3 minggu)
-- [ ] Layar "Toolchain": JDK, Gradle, SDK, build-tools, NDK
-- [ ] Downloader (resume, checksum, progress, hapus)
-- [ ] Unduh `android.jar` per API dari `sable/android-platforms`
+- [~] Layar "Toolchain": JDK, Gradle, SDK, build-tools, NDK
+- [~] Downloader (resume, checksum, progress, hapus)
+- [~] Unduh `android.jar` per API dari `sable/android-platforms`
 - [ ] Generate struktur SDK agar dikenali AGP
-- [ ] Setting per proyek `.sallyide/project.json`
-- [ ] Info ukuran storage + bersihkan cache
+- [~] Setting per proyek `.sallyide/project.json`
+- [~] Info ukuran storage + bersihkan cache
 
 **Rilis:** `v0.3`.
 

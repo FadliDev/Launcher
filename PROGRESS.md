@@ -5,14 +5,14 @@ File ini dicatat ulang **setiap ada update**. Entri terbaru di atas (bagian *Log
 Legenda: ✅ terverifikasi di perangkat · 🟡 kode ditulis, belum dikompilasi/diuji · ⬜ belum dikerjakan
 
 ## Status saat ini
-**Versi:** v0.2.1 (tema biru MD3 + syntax highlight baru, di atas v0.2.0) · **Status build:** 🟡 v0.2.0 ditulis tanpa kompilator (sandbox tidak bisa unduh Android SDK/dependensi). Crash startup dari v0.1.3 (tm4e/Java 11 API) **belum terbukti beres** — butuh uji di perangkat
+**Versi:** v0.3.0 (Fase 3 sebagian: Toolchain manager) di atas v0.2.1 (tema biru MD3) · **Status build:** 🟡 v0.2.0 ditulis tanpa kompilator (sandbox tidak bisa unduh Android SDK/dependensi). Crash startup dari v0.1.3 (tm4e/Java 11 API) **belum terbukti beres** — butuh uji di perangkat
 
 | Fase | Isi | Status |
 |---|---|---|
 | 0 | Spike & validasi (JDK/Gradle/aapt2 di HP) | ⬜ perlu perangkat nyata |
 | 1 | Editor dasar (MVP) | 🟡 ~85% kode ditulis, menunggu build pertama |
 | 2 | Proyek & file explorer | 🟡 kode ditulis di v0.2.0 (lihat rincian Fase 2) |
-| 3 | SDK & toolchain manager | ⬜ |
+| 3 | SDK & toolchain manager | 🟡 sebagian (Gradle + android.jar; JDK/build-tools/NDK menunggu Fase 0) |
 | 4 | Build Gradle | ⬜ |
 | 5 | Intelligence & LSP | ⬜ |
 | 6 | NDK / C++ | ⬜ |
@@ -51,6 +51,20 @@ Legenda: ✅ terverifikasi di perangkat · 🟡 kode ditulis, belum dikompilasi/
 | Pindah file / multi-select / drag-drop | ⬜ | |
 | Migrasi v0.1 | 🟡 | File lepas di `workspace/` otomatis dipindah ke proyek `Workspace-lama` |
 
+## Fase 3 — rincian (v0.3.0)
+| Item | Status | Catatan |
+|---|---|---|
+| Layar Toolchain | 🟡 | Ikon 🔧 di Beranda atau menu ⋮ editor. Daftar Gradle (8.13, 8.11.1, 8.10.2, 8.9, 8.7, 7.6.4) dan android.jar API 28–36 |
+| Downloader | 🟡 | `data/Downloader.kt`: resume (`.part` + Range), progres, batal, SHA-256. Gradle diverifikasi dari `<url>.sha256`; android.jar tak punya checksum upstream → hash dicatat lokal (`android.jar.sha256`) |
+| android.jar | 🟡 | Dari `Sable/android-platforms` (branch `master` — **belum diverifikasi**, URL ada di `Toolchain.PLATFORM_BASE`). Hanya `android.jar` + `source.properties`; `package.xml`, `build.prop`, `data/`, `core-for-system-modules.jar` yang dibutuhkan AGP **belum** dibuat |
+| Gradle | 🟡 | Unduh zip → ekstrak (zip-slip dicek) ke `filesDir/toolchain/gradle/gradle-<v>`, bin/* diberi izin eksekusi. Belum pernah dijalankan |
+| Info storage + bersihkan cache | 🟡 | |
+| Setelan build per proyek | 🟡 | Menu ⋮ → Setelan build → `.sallyide/project.json` (gradleVersion, jdkVersion, compileSdk, ndkVersion, jvmArgs) |
+| Cek kompatibilitas Gradle↔AGP↔JDK | 🟡 | `Compat` di `data/ProjectConfig.kt`, tabel ringkas (bisa usang); AGP dideteksi dari build files / libs.versions.toml |
+| JDK, build-tools, NDK | ⬜ | Menunggu spike Fase 0 (PLAN §4.5) |
+| Generate struktur SDK utk AGP | ⬜ | |
+- Manifest: ditambah izin `INTERNET`.
+
 ## Keputusan & penyimpangan dari dokumen
 - Single-module dulu (PLAN §3 menyarankan multi-module).
 - Completion lewat SuggestionBar, bukan popup Sora (lebih sedikit API Sora yang dipakai dan tidak menutupi editor di layar kecil).
@@ -82,6 +96,10 @@ Kode ditulis dari pengetahuan API Sora-editor 0.23.x tanpa bisa dikompilasi. Tit
 3. Kalau stabil → rilis `v0.1` lalu lanjut sesuai urutan cepat ROADMAP: **Fase 0 spike → Fase 3 → Fase 4** (build di HP)
 
 ## Log perubahan
+### 2026-10-22 — v0.3.0 (Fase 3: Toolchain manager)
+- File baru: `data/Downloader.kt`, `data/Toolchain.kt`, `data/ToolchainModel.kt`, `data/ProjectConfig.kt`, `ui/ToolchainScreen.kt` (+ `BuildSettingsSheet`)
+- Diubah: `IdeViewModel` (+`toolchain`, `showToolchain`), `Root.kt` (layar ke-3 + BackHandler), `HomeScreen`/`EditorScreen` (tombol/menu), Manifest (INTERNET)
+- ⚠️ Belum dikompilasi/dijalankan. Titik rawan: Compose `CircularProgressIndicator(progress = { })`, regex di `ProjectConfig.detectAgp`, URL raw GitHub `Sable/android-platforms` (branch/LFS), dan apakah jaringan di HP mengizinkan unduhan
 ### 2026-10-22 — v0.2.1b (fix dari screenshot)
 - Kurung/tanda baca tak terlihat di tema gelap: tema TextMate tak punya warna default (entri tanpa `scope`) → ditambah, plus `TEXT_NORMAL`/`WHOLE_BACKGROUND` di `applyChrome`
 - Bracket match: warna sorotan (`HIGHLIGHTED_DELIMITERS_*`) pakai primary biru + latar container, tidak lagi hitam tebal

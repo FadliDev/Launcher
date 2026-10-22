@@ -78,6 +78,7 @@ fun EditorScreen(vm: IdeViewModel, project: File, snackbar: SnackbarHostState) {
     var showFind by remember { mutableStateOf(false) }
     var showSnippets by remember { mutableStateOf(false) }
     var showSettings by remember { mutableStateOf(false) }
+    var showBuild by remember { mutableStateOf(false) }
     var showGoto by remember { mutableStateOf(false) }
     var showSearch by remember { mutableStateOf(false) }
     var menuOpen by remember { mutableStateOf(false) }
@@ -177,6 +178,10 @@ fun EditorScreen(vm: IdeViewModel, project: File, snackbar: SnackbarHostState) {
                                 HorizontalDivider()
                                 DropdownMenuItem(text = { Text("Ekspor zip") }, leadingIcon = { Icon(Ic.Download, null) },
                                     onClick = { menuOpen = false; vm.saveAll(); zip.onExport(project) })
+                                DropdownMenuItem(text = { Text("Setelan build") }, leadingIcon = { Icon(Ic.Build, null) },
+                                    onClick = { menuOpen = false; showBuild = true })
+                                DropdownMenuItem(text = { Text("Toolchain") }, leadingIcon = { Icon(Ic.Download, null) },
+                                    onClick = { menuOpen = false; vm.showToolchain = true })
                                 DropdownMenuItem(text = { Text("Setelan") }, leadingIcon = { Icon(Ic.Settings, null) },
                                     onClick = { menuOpen = false; showSettings = true })
                                 DropdownMenuItem(text = { Text("Tutup proyek") }, leadingIcon = { Icon(Ic.Home, null) },
@@ -239,6 +244,7 @@ fun EditorScreen(vm: IdeViewModel, project: File, snackbar: SnackbarHostState) {
             handle.insertSnippet(s, 0, prefs.tabSize); showSnippets = false
         }, onDismiss = { showSnippets = false })
     }
+    if (showBuild) BuildSettingsSheet(project, vm.toolchain) { showBuild = false }
     if (showSettings) {
         SettingsSheet(prefs, vm::setThemeMode, vm::setFontSize, vm::setWordWrap, vm::setLineNumbers, vm::setTabSize) { showSettings = false }
     }

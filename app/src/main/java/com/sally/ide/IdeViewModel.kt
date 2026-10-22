@@ -18,6 +18,8 @@ import com.sally.ide.data.ProjectSearch
 import com.sally.ide.data.ProjectStore
 import com.sally.ide.data.SettingsRepo
 import com.sally.ide.data.Template
+import com.sally.ide.data.Toolchain
+import com.sally.ide.data.ToolchainModel
 import com.sally.ide.data.ThemeMode
 import com.sally.ide.editor.Lang
 import com.sally.ide.editor.Snippet
@@ -46,6 +48,10 @@ class IdeViewModel(app: Application) : AndroidViewModel(app) {
     private val repo = SettingsRepo(app)
     val prefs = repo.flow.stateIn(viewModelScope, SharingStarted.Eagerly, Prefs())
     private val store = ProjectStore(File(app.getExternalFilesDir(null) ?: app.filesDir, "workspace"))
+
+    // ---------- toolchain (Fase 3) ----------
+    val toolchain = ToolchainModel(Toolchain(File(app.filesDir, "toolchain")), viewModelScope) { message = it }
+    var showToolchain by mutableStateOf(false)
 
     // ---------- beranda ----------
     var loaded by mutableStateOf(false)

@@ -68,6 +68,7 @@ fun HomeScreen(vm: IdeViewModel, snackbar: SnackbarHostState) {
             TopAppBar(
                 title = { Text("Sally IDE") },
                 actions = {
+                    IconButton(onClick = { vm.showToolchain = true }) { Icon(Ic.Build, "Toolchain") }
                     IconButton(onClick = zip.onImport) { Icon(Ic.Upload, "Impor zip") }
                     IconButton(onClick = { showSettings = true }) { Icon(Ic.Settings, "Setelan") }
                 },

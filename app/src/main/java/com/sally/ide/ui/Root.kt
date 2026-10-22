@@ -1,5 +1,6 @@
 package com.sally.ide.ui
 
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.material3.SnackbarHostState
@@ -12,13 +13,16 @@ import androidx.compose.runtime.setValue
 import com.sally.ide.IdeViewModel
 import java.io.File
 
-/** Dua layar saja: Beranda (daftar proyek) dan Editor (proyek terbuka). */
+/** Layar: Beranda (daftar proyek), Editor (proyek terbuka), dan Toolchain (unduhan Gradle/SDK). */
 @Composable
 fun SallyRoot(vm: IdeViewModel) {
     val snackbar = remember { SnackbarHostState() }
     vm.message?.let { msg -> LaunchedEffect(msg) { snackbar.showSnackbar(msg); vm.message = null } }
     val p = vm.project
-    if (p == null) HomeScreen(vm, snackbar) else EditorScreen(vm, p, snackbar)
+    if (vm.showToolchain) {
+        BackHandler { vm.showToolchain = false }
+        ToolchainScreen(vm, snackbar)
+    } else if (p == null) HomeScreen(vm, snackbar) else EditorScreen(vm, p, snackbar)
 }
 
 /** Aksi impor/ekspor zip lewat Storage Access Framework (tanpa izin storage). */
