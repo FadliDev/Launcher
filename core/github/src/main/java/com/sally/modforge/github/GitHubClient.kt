@@ -11,6 +11,7 @@ import okhttp3.Request
 import okhttp3.RequestBody
 import okhttp3.RequestBody.Companion.toRequestBody
 import java.io.IOException
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
 
 const val GITHUB_API = "https://api.github.com"
@@ -29,9 +30,13 @@ class GitHubClient(
         .build(),
     val json: Json = Json { ignoreUnknownKeys = true; explicitNulls = false },
 ) {
+    /** Cache ETag in-memori: url+token -> (etag, body). 304 tidak menghitung ke rate limit. */
+    private val etags = ConcurrentHashMap<String, Pair<String, String>>()
+
     /**
      * Mengirim request dengan retry + backoff untuk error jaringan, 5xx,
      * dan rate limit (429 / 403 dengan sisa kuota 0).
+     * Dengan [useEtag], GET memakai If-None-Match dan memakai body cache bila 304.
      */
     suspend fun call(
         method: String,
@@ -39,9 +44,14 @@ class GitHubClient(
         token: String? = null,
         body: RequestBody? = null,
         headers: Map<String, String> = emptyMap(),
+        useEtag: Boolean = false,
     ): String = withContext(Dispatchers.IO) {
-        callWithRetry(method, url, token, body, headers)
+        callWithRetry(method, url, token, body, headers, useEtag)
     }
+
+    /** GET teks mentah (misalnya JSON dari raw.githubusercontent.com), dengan ETag. */
+    suspend fun fetchText(url: String): String =
+        call("GET", url, headers = mapOf("Accept" to "application/json"), useEtag = true)
 
     private suspend fun callWithRetry(
         method: String,
@@ -49,14 +59,24 @@ class GitHubClient(
         token: String?,
         body: RequestBody?,
         headers: Map<String, String>,
+        useEtag: Boolean,
     ): String {
+        val cacheKey = "${token.hashCode()}|$method|$url"
+        val cacheable = useEtag && method == "GET"
+        val cached = if (cacheable) etags[cacheKey] else null
+        val requestHeaders = if (cached != null) headers + ("If-None-Match" to cached.first) else headers
+
         var attempt = 1
         while (true) {
-            val outcome = runCatching { send(method, url, token, body, headers) }
+            val outcome = runCatching { send(method, url, token, body, requestHeaders) }
             val failure = outcome.exceptionOrNull()
             if (failure == null) {
                 val res = outcome.getOrThrow()
-                if (res.code in 200..299) return res.body
+                if (res.code == 304 && cached != null) return cached.second
+                if (res.code in 200..299) {
+                    if (cacheable) res.etag?.let { etags[cacheKey] = it to res.body }
+                    return res.body
+                }
                 if (!res.retryable() || attempt >= MAX_ATTEMPTS) {
                     throw GitHubException(res.code, res.errorMessage())
                 }
@@ -87,12 +107,17 @@ class GitHubClient(
         builder.method(method, payload)
 
         http.newCall(builder.build()).execute().use { r ->
-            return RawResponse(r.code, r.body?.string().orEmpty(), r.headers)
+            return RawResponse(r.code, r.body?.string().orEmpty(), r.headers, r.header("ETag"))
         }
     }
 }
 
-private class RawResponse(val code: Int, val body: String, val headers: Headers)
+private class RawResponse(
+    val code: Int,
+    val body: String,
+    val headers: Headers,
+    val etag: String?,
+)
 
 private fun RawResponse.retryable(): Boolean =
     code >= 500 ||

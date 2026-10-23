@@ -19,8 +19,9 @@ android {
 }
 
 dependencies {
-    implementation(libs.okhttp)
-    implementation(libs.kotlinx.serialization.json)
-    implementation(libs.kotlinx.coroutines.android)
+    // 'api' karena tipe OkHttpClient, Json, dan Flow muncul di API publik modul ini
+    api(libs.okhttp)
+    api(libs.kotlinx.serialization.json)
+    api(libs.kotlinx.coroutines.android)
     testImplementation(libs.junit)
 }

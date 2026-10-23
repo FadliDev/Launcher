@@ -65,6 +65,14 @@ fun AccountScreen(vm: AccountViewModel = viewModel()) {
             )
         }
 
+        if (ui.versionInfo.isNotBlank()) {
+            Text(
+                ui.versionInfo,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+
         ui.message?.let { msg ->
             Text(
                 msg,

@@ -24,11 +24,13 @@ data class AccountUiState(
     val busy: Boolean = false,
     val message: String? = null,
     val error: Boolean = false,
+    val versionInfo: String = "",
 )
 
 class AccountViewModel(application: Application) : AndroidViewModel(application) {
 
-    private val account = (application as ModForgeApp).account
+    private val app = application as ModForgeApp
+    private val account = app.account
     private val _ui = MutableStateFlow(AccountUiState(clientId = account.clientId))
     val ui: StateFlow<AccountUiState> = _ui.asStateFlow()
 
@@ -37,6 +39,11 @@ class AccountViewModel(application: Application) : AndroidViewModel(application)
     init {
         viewModelScope.launch {
             account.session.collect { s -> _ui.update { it.copy(session = s) } }
+        }
+        viewModelScope.launch {
+            app.versions.matrix.collect { m ->
+                _ui.update { it.copy(versionInfo = "Daftar versi: ${m.versions.size} entri, diperbarui ${m.updated}") }
+            }
         }
         viewModelScope.launch { account.restore() }
     }
