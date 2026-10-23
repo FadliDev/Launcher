@@ -16,6 +16,9 @@ private val PACKAGE = Regex("""^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+$""")
 fun validate(config: ProjectConfig, matrix: VersionMatrix): List<ValidationIssue> {
     val issues = mutableListOf<ValidationIssue>()
 
+    if (config.name.isBlank()) {
+        issues += ValidationIssue("name", "Nama mod wajib diisi.", Severity.ERROR)
+    }
     if (!MOD_ID.matches(config.modId)) {
         issues += ValidationIssue("modId", "Mod ID hanya huruf kecil, angka, dan underscore (2–64 karakter).", Severity.ERROR)
     }
