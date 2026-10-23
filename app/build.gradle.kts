@@ -7,6 +7,7 @@ plugins {
 android {
     namespace = "com.sally.freshlauncher"
     compileSdk = 34
+    ndkVersion = "25.2.9519653"
 
     defaultConfig {
         applicationId = "com.sally.freshlauncher"
@@ -14,11 +15,6 @@ android {
         targetSdk = 34
         versionCode = 1
         versionName = "0.1.0"
-
-        ndk {
-            // Skeleton ini hanya menargetkan arm64 dulu.
-            abiFilters += listOf("arm64-v8a")
-        }
     }
 
     buildTypes {
@@ -27,10 +23,18 @@ android {
         }
     }
 
+    // Engine native dari ZalithLauncher (GPL-3.0), dibangun dengan ndk-build.
     externalNativeBuild {
-        cmake {
-            path = file("src/main/cpp/CMakeLists.txt")
-            version = "3.22.1"
+        ndkBuild {
+            path = file("src/main/jni/Android.mk")
+            arguments += listOf("APP_ABI=arm64-v8a")
+        }
+    }
+
+    packaging {
+        jniLibs {
+            useLegacyPackaging = true
+            pickFirsts += listOf("**/libbytehook.so")
         }
     }
 
@@ -43,6 +47,7 @@ android {
     }
     buildFeatures {
         compose = true
+        prefab = true
     }
 }
 
@@ -56,4 +61,5 @@ dependencies {
     implementation("androidx.activity:activity-compose:1.9.2")
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.6")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
+    implementation("com.bytedance:bytehook:1.0.10")
 }
