@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Blok kubus sederhana: sisi atas, kiri, dan kanan -->
+    <path android:fillColor="#7BD15A" android:pathData="M54,30 L76,42 L54,54 L32,42 Z" />
+    <path android:fillColor="#4CA23A" android:pathData="M32,42 L54,54 L54,80 L32,68 Z" />
+    <path android:fillColor="#2F7A25" android:pathData="M76,42 L54,54 L54,80 L76,68 Z" />
+</vector>

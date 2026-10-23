@@ -13,7 +13,7 @@ data class LaunchSpec(
 }
 
 object LaunchBuilder {
-    fun build(versionId: String, account: OfflineAccount): LaunchSpec {
+    fun build(versionId: String, account: OfflineAccount, ramMb: Int): LaunchSpec {
         val dir = File(GamePaths.versions, versionId)
         val json = JSONObject(File(dir, "$versionId.json").readText())
         val classpath = File(dir, "classpath.txt").readText()
@@ -56,7 +56,7 @@ object LaunchBuilder {
         if (jvm.none { it == "-cp" || it == "-classpath" }) {
             jvm += listOf("-cp", classpath)
         }
-        jvm += "-Xmx1024M"
+        jvm += "-Xmx${ramMb}M"
 
         return LaunchSpec(jvm, json.getString("mainClass"), game)
     }

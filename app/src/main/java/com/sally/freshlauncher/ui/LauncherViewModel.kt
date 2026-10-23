@@ -3,6 +3,7 @@ package com.sally.freshlauncher.ui
 import android.app.Application
 import android.content.Context
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -28,6 +29,7 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
     var installed by mutableStateOf<Set<String>>(emptySet())
     var selected by mutableStateOf(prefs.getString("selected", null))
     var accountName by mutableStateOf(prefs.getString("name", "Player") ?: "Player")
+    var ramMb by mutableIntStateOf(prefs.getInt("ram", 2048))
     var busy by mutableStateOf(false)
     val log = mutableStateListOf<String>()
 
@@ -36,7 +38,8 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
         installed = GamePaths.installedVersions()
     }
 
-    /** Dipanggil lazy setelah init, supaya GamePaths sudah siap. */
+    val jreReady: Boolean get() = GamePaths.jliLib.exists()
+
     private val gameLauncher: GameLauncher by lazy {
         if (GamePaths.jliLib.exists()) JvmGameLauncher(getApplication(), GamePaths.jliLib)
         else PendingRuntimeLauncher()
@@ -82,6 +85,11 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
         prefs.edit().putString("name", name).apply()
     }
 
+    fun saveRam(mb: Int) {
+        ramMb = mb
+        prefs.edit().putInt("ram", mb).apply()
+    }
+
     fun play() = viewModelScope.launch {
         val id = selected
         if (id == null) {
@@ -97,7 +105,9 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
             return@launch
         }
         try {
-            val spec = withContext(Dispatchers.IO) { LaunchBuilder.build(id, OfflineAccount(accountName)) }
+            val spec = withContext(Dispatchers.IO) {
+                LaunchBuilder.build(id, OfflineAccount(accountName), ramMb)
+            }
             say("Perintah: ${spec.preview()}")
             gameLauncher.launch(spec).onFailure { say(it.message ?: "Gagal meluncurkan") }
         } catch (e: Exception) {
