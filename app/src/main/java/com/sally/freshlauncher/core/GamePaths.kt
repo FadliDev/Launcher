@@ -15,9 +15,8 @@ object GamePaths {
     val assets: File get() = File(root, "assets")
     val gameDir: File get() = File(root, "game").apply { mkdirs() }
 
-    /** Lokasi JRE yang diharapkan. Untuk tes, salin JRE ke folder ini secara manual. */
+    /** Folder JRE. Diisi dari arsip .tar.xz lewat menu Pengaturan. */
     val jreHome: File get() = File(root, "jre-17")
-    val jliLib: File get() = File(jreHome, "lib/libjli.so")
 
     /** Versi dianggap terpasang jika sudah punya classpath.txt (ditulis di akhir instalasi). */
     fun installedVersions(): Set<String> =

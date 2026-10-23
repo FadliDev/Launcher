@@ -6,7 +6,7 @@ import java.io.File
 
 /**
  * Titik integrasi ke runtime JVM. Implementasi utama mengirim argumen ke GameService
- * (proses :game), yang lalu memanggil NativeJvm.launch.
+ * (proses :game), yang menyiapkan environment JRE lalu memanggil JVM.
  */
 interface GameLauncher {
     suspend fun launch(spec: LaunchSpec): Result<Unit>
@@ -14,18 +14,19 @@ interface GameLauncher {
 
 class PendingRuntimeLauncher : GameLauncher {
     override suspend fun launch(spec: LaunchSpec): Result<Unit> =
-        Result.failure(IllegalStateException("JRE belum tersedia di ${GamePaths.jreHome.absolutePath}"))
+        Result.failure(IllegalStateException("JRE belum terpasang. Pasang dulu dari menu Pengaturan."))
 }
 
 class JvmGameLauncher(
     private val context: Context,
-    private val jliLib: File
+    private val jreHome: File
 ) : GameLauncher {
     override suspend fun launch(spec: LaunchSpec): Result<Unit> = runCatching {
-        check(jliLib.exists()) { "libjli.so tidak ditemukan di ${jliLib.absolutePath}" }
+        check(JreEnvironment.isInstalled(jreHome)) { "JRE belum terpasang di ${jreHome.absolutePath}" }
         val argv = (listOf("java") + spec.javaArgs + spec.mainClass + spec.gameArgs).toTypedArray()
         val intent = Intent(context, GameService::class.java)
-            .putExtra(GameService.EXTRA_JLI, jliLib.absolutePath)
+            .putExtra(GameService.EXTRA_JRE_HOME, jreHome.absolutePath)
+            .putExtra(GameService.EXTRA_GAME_DIR, GamePaths.gameDir.absolutePath)
             .putExtra(GameService.EXTRA_ARGS, argv)
         context.startForegroundService(intent)
     }

@@ -7,6 +7,7 @@ import android.app.Service
 import android.content.Intent
 import android.os.IBinder
 import android.util.Log
+import java.io.File
 
 /**
  * Menjalankan JVM di proses terpisah (:game) agar exit() dari JVM
@@ -17,9 +18,10 @@ class GameService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        val jli = intent?.getStringExtra(EXTRA_JLI)
+        val jreHome = intent?.getStringExtra(EXTRA_JRE_HOME)
+        val gameDir = intent?.getStringExtra(EXTRA_GAME_DIR)
         val argv = intent?.getStringArrayExtra(EXTRA_ARGS)
-        if (jli == null || argv == null) {
+        if (jreHome == null || gameDir == null || argv == null) {
             Log.e(TAG, "Argumen peluncuran tidak lengkap")
             stopSelf()
             return START_NOT_STICKY
@@ -28,8 +30,15 @@ class GameService : Service() {
         createChannel()
         startForeground(NOTIFICATION_ID, buildNotification())
 
+        val appContext = applicationContext
         Thread({
-            val rc = NativeJvm.launch(jli, argv)
+            val rc = try {
+                JreEnvironment.prepare(appContext, File(jreHome), File(gameDir))
+                NativeJvm.launch(argv)
+            } catch (t: Throwable) {
+                Log.e(TAG, "Gagal menjalankan JVM", t)
+                -1
+            }
             Log.i(TAG, "Selesai dengan kode $rc")
             stopSelf()
         }, "jvm-main").start()
@@ -52,7 +61,8 @@ class GameService : Service() {
             .build()
 
     companion object {
-        const val EXTRA_JLI = "jli"
+        const val EXTRA_JRE_HOME = "jreHome"
+        const val EXTRA_GAME_DIR = "gameDir"
         const val EXTRA_ARGS = "argv"
         private const val TAG = "FreshGame"
         private const val CHANNEL_ID = "game"
