@@ -11,6 +11,7 @@ import androidx.lifecycle.viewModelScope
 import com.sally.freshlauncher.core.GameLauncher
 import com.sally.freshlauncher.core.GamePaths
 import com.sally.freshlauncher.core.Installer
+import com.sally.freshlauncher.core.JvmGameLauncher
 import com.sally.freshlauncher.core.LaunchBuilder
 import com.sally.freshlauncher.core.OfflineAccount
 import com.sally.freshlauncher.core.PendingRuntimeLauncher
@@ -22,7 +23,6 @@ import kotlinx.coroutines.withContext
 
 class LauncherViewModel(app: Application) : AndroidViewModel(app) {
     private val prefs = app.getSharedPreferences("fresh", Context.MODE_PRIVATE)
-    private val gameLauncher: GameLauncher = PendingRuntimeLauncher()
 
     var versions by mutableStateOf<List<VersionEntry>>(emptyList())
     var installed by mutableStateOf<Set<String>>(emptySet())
@@ -34,6 +34,12 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
     init {
         GamePaths.init(app)
         installed = GamePaths.installedVersions()
+    }
+
+    /** Dipanggil lazy setelah init, supaya GamePaths sudah siap. */
+    private val gameLauncher: GameLauncher by lazy {
+        if (GamePaths.jliLib.exists()) JvmGameLauncher(getApplication(), GamePaths.jliLib)
+        else PendingRuntimeLauncher()
     }
 
     /** Selalu memasukkan log dari thread manapun ke thread utama. */
