@@ -5,22 +5,13 @@ plugins {
 }
 
 android {
-<<<<<<< HEAD
-    namespace = "com.sally.modforge"
-    compileSdk = 35
-=======
     namespace = "com.sally.freshlauncher"
     compileSdk = 34
->>>>>>> 6353218 (Launcher)
 
     defaultConfig {
         applicationId = "com.sally.freshlauncher"
         minSdk = 26
-<<<<<<< HEAD
-        targetSdk = 35
-=======
         targetSdk = 34
->>>>>>> 6353218 (Launcher)
         versionCode = 1
         versionName = "0.1.0"
     }
