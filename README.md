@@ -1,27 +1,31 @@
 # FreshLauncher
 
-Launcher Minecraft Java untuk Android — skeleton awal, ditulis dari nol dengan Jetpack Compose.
+Launcher Minecraft Java untuk Android. Gratis dan open source di bawah **GNU GPL v3**.
 
-## Cakupan versi ini
-- UI Compose dengan 3 tab: Beranda, Versi, Akun
+## Status
+Tahap awal pengembangan. Fitur yang sudah ada:
+- UI Jetpack Compose dengan tab Beranda, Versi, Akun, dan Pengaturan
 - Akun offline dengan UUID standar Minecraft
-- Ambil daftar versi dari Mojang (`version_manifest_v2.json`)
-- Unduh metadata, client.jar, library, dan asset (terverifikasi SHA-1)
-- Susun argumen JVM dan game dari metadata versi (`LaunchBuilder`)
+- Unduhan versi dari Mojang, dengan verifikasi SHA-1
+- Pengaturan RAM untuk game
 
-## Yang belum ada
-- **Runtime JVM**: `GameLauncher` masih berupa stub (`PendingRuntimeLauncher`). Perlu JRE terbundel dan pemanggilan `libjli.so` via JNI.
-- **Native library** (LWJGL natives): unduhan native dilewati.
-- **Bridge GL/GLFW dan input**: belum ada. Rujuk arsitektur ZalithLauncher sebagai referensi.
-- **Renderer** (Krypton Wrapper, dll.): belum ada.
-- **Java args dari pengguna, mod loader, modpack**: belum ada.
+Belum ada:
+- Runtime JVM yang bisa dipakai (JRE dan engine native belum terintegrasi)
+- Renderer grafis, bridge input, dan dukungan mod loader
+
+## Lisensi
+FreshLauncher berlisensi **GPL-3.0**, lihat `LICENSE`. Atribusi lengkap untuk pustaka dan proyek yang dipakai ada di `NOTICE.md`.
+
+FreshLauncher adalah proyek komunitas dan tidak berafiliasi dengan Mojang atau Microsoft.
 
 ## Build
 Butuh JDK 17 dan Android SDK (API 34). Dengan Gradle 8.9 terpasang:
 
     gradle :app:assembleDebug
 
-Atau cukup push ke GitHub; workflow `.github/workflows/build.yml` menghasilkan APK debug sebagai artifact.
+Atau push ke GitHub. Workflow `.github/workflows/build.yml` menghasilkan APK debug sebagai artifact.
 
-## Catatan
-Kode ini tidak menyalin source ZalithLauncher. Jika nanti ada bagian yang diambil langsung dari sana, lisensi GPL-3.0 berlaku untuk bagian tersebut.
+## Rencana berikutnya
+1. Integrasi engine native dari ZalithLauncher (sumber dan `jniLibs`).
+2. Penyediaan JRE terpisah dari repo, supaya riwayat git tidak membengkak.
+3. Menjalankan Minecraft end-to-end di perangkat.
