@@ -15,6 +15,11 @@ android {
         targetSdk = 34
         versionCode = 1
         versionName = "0.1.0"
+
+        ndk {
+            // Hanya arm64 dulu. AGP meneruskan ABI ini ke ndk-build.
+            abiFilters += listOf("arm64-v8a")
+        }
     }
 
     buildTypes {
@@ -27,7 +32,6 @@ android {
     externalNativeBuild {
         ndkBuild {
             path = file("src/main/jni/Android.mk")
-            arguments += listOf("APP_ABI=arm64-v8a")
         }
     }
 
