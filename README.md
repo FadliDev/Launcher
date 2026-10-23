@@ -1,36 +1,35 @@
-# FreshLauncher
+# ModForge Android — M1
 
-Launcher Minecraft Java untuk Android. Gratis dan open source di bawah **GNU GPL v3**.
+Status: **M1 (Fondasi & Akun GitHub)**. Sudah ada:
 
-## Status
-Tahap awal pengembangan. Fitur yang sudah ada:
-- UI Jetpack Compose dengan tab Beranda, Versi, Akun, dan Pengaturan
-- Akun offline dengan UUID standar Minecraft
-- Unduhan versi dari Mojang, dengan verifikasi SHA-1
-- Pengaturan RAM untuk game
+- Proyek multi-modul: `:app`, `:core:model`, `:core:github`
+- `VersionMatrix` (data dari `core/model/src/main/assets/version-matrix.json`) + validator, dengan unit test
+- Login GitHub: OAuth Device Flow atau Personal Access Token
+- Token dienkripsi AES-GCM dengan kunci Android Keystore
+- Klien GitHub REST dengan retry, backoff, dan penanganan rate limit
+- Layar Akun: login, tes buat repo + satu commit awal, logout, cabut akses
+- Tema minimalis sesuai `docs/specs/DESIGN.md`
 
-Sudah diintegrasikan (belum diuji di perangkat):
-- Engine native ZalithLauncher di `app/src/main/jni` dan `jniLibs/arm64-v8a` (dibangun dengan ndk-build)
-- Pemanggilan `VMLauncher.launchJVM` lewat `NativeJvm`
-
-Belum ada:
-- Setup environment JRE (LD_LIBRARY_PATH, renderer, linker namespace) sebelum JVM dipanggil
-- JRE itu sendiri (tidak di-commit ke git, lihat rencana di bawah)
-- Renderer grafis, bridge input, dan dukungan mod loader
-
-## Lisensi
-FreshLauncher berlisensi **GPL-3.0**, lihat `LICENSE`. Atribusi lengkap untuk pustaka dan proyek yang dipakai ada di `NOTICE.md`.
-
-FreshLauncher adalah proyek komunitas dan tidak berafiliasi dengan Mojang atau Microsoft.
+Belum ada (lihat `docs/specs/ROADMAP.md`): wizard project, template engine, sync engine, build orchestrator, editor.
 
 ## Build
-Butuh JDK 17 dan Android SDK (API 34). Dengan Gradle 8.9 terpasang:
 
-    gradle :app:assembleDebug
+Build dilakukan di GitHub Actions (`.github/workflows/android.yml`). Untuk lokal, butuh JDK 17 dan Android SDK platform 35:
 
-Atau push ke GitHub. Workflow `.github/workflows/build.yml` menghasilkan APK debug sebagai artifact.
+```bash
+gradle wrapper --gradle-version 8.10.2   # sekali saja, membuat ./gradlew
+./gradlew test
+./gradlew :app:assembleDebug
+```
 
-## Rencana berikutnya
-1. Setup environment JRE dan pengujian launch di perangkat.
-2. Penyediaan JRE terpisah dari repo (unduh saat build atau pasang manual), supaya riwayat git tidak membengkak.
-3. Menjalankan Minecraft end-to-end di perangkat.
+APK debug ada di `app/build/outputs/apk/debug/app-debug.apk`.
+
+## Mengaktifkan Device Flow
+
+Buat OAuth App di GitHub, aktifkan opsi Device Flow, lalu isi **Client ID** di layar GitHub. Client ID bersifat publik; jangan pernah memasukkan client secret.
+
+## Catatan
+
+- Nilai di `version-matrix.json` ditandai `"verified": false`. Verifikasi lewat CI di M0 sebelum dipakai untuk build.
+- String UI masih hardcoded dalam Bahasa Indonesia. Pemindahan ke `strings.xml` (ID/EN) dijadwalkan di M6.
+- Hapus token dari perangkat tidak mencabut izin di GitHub. Gunakan tombol "Cabut izin di GitHub".

@@ -1,0 +1,51 @@
+{
+  "schema": 1,
+  "updated": "2026-10-23",
+  "versions": [
+    {
+      "minecraft": "1.21.1",
+      "javaMin": 21,
+      "javaMax": 21,
+      "javaRecommended": 21,
+      "gradle": "8.10.2",
+      "loom": "1.7",
+      "fabricLoader": "0.16.9",
+      "fabricApi": "0.116.6+1.21.1",
+      "mappings": ["mojang", "yarn"],
+      "packFormat": 34,
+      "stability": "stable",
+      "verified": false,
+      "features": { "dataComponents": true, "itemModelDefinitions": false }
+    },
+    {
+      "minecraft": "1.20.1",
+      "javaMin": 17,
+      "javaMax": 17,
+      "javaRecommended": 17,
+      "gradle": "8.8",
+      "loom": "1.6",
+      "fabricLoader": "0.16.9",
+      "fabricApi": "0.92.6+1.20.1",
+      "mappings": ["mojang", "yarn"],
+      "packFormat": 15,
+      "stability": "stable",
+      "verified": false,
+      "features": { "dataComponents": false, "itemModelDefinitions": false }
+    },
+    {
+      "minecraft": "1.18.2",
+      "javaMin": 17,
+      "javaMax": 17,
+      "javaRecommended": 17,
+      "gradle": "8.1.1",
+      "loom": "1.2",
+      "fabricLoader": "0.14.22",
+      "fabricApi": "0.76.1+1.18.2",
+      "mappings": ["yarn"],
+      "packFormat": 8,
+      "stability": "experimental",
+      "verified": false,
+      "features": { "dataComponents": false, "itemModelDefinitions": false }
+    }
+  ]
+}

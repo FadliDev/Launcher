@@ -1,25 +1,28 @@
 plugins {
-    id("com.android.application")
-    id("org.jetbrains.kotlin.android")
-    id("org.jetbrains.kotlin.plugin.compose")
+    alias(libs.plugins.android.application)
+    alias(libs.plugins.kotlin.android)
+    alias(libs.plugins.kotlin.compose)
 }
 
 android {
-    namespace = "com.sally.freshlauncher"
-    compileSdk = 34
-    ndkVersion = "25.2.9519653"
+    namespace = "com.sally.modforge"
+    compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.sally.freshlauncher"
+        applicationId = "com.sally.modforge"
         minSdk = 26
-        targetSdk = 34
+        targetSdk = 35
         versionCode = 1
-        versionName = "0.1.0"
+        versionName = "0.1.0-m1"
+    }
 
-        ndk {
-            // Hanya arm64 dulu. AGP meneruskan ABI ini ke ndk-build.
-            abiFilters += listOf("arm64-v8a")
-        }
+    buildFeatures {
+        compose = true
+    }
+
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
 
     buildTypes {
@@ -27,45 +30,21 @@ android {
             isMinifyEnabled = false
         }
     }
-
-    // Engine native dari ZalithLauncher (GPL-3.0), dibangun dengan ndk-build.
-    externalNativeBuild {
-        ndkBuild {
-            path = file("src/main/jni/Android.mk")
-        }
-    }
-
-    packaging {
-        jniLibs {
-            useLegacyPackaging = true
-            pickFirsts += listOf("**/libbytehook.so")
-        }
-    }
-
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_17
-        targetCompatibility = JavaVersion.VERSION_17
-    }
-    kotlinOptions {
-        jvmTarget = "17"
-    }
-    buildFeatures {
-        compose = true
-        prefab = true
-    }
 }
 
 dependencies {
-    val composeBom = platform("androidx.compose:compose-bom:2024.09.00")
-    implementation(composeBom)
-    implementation("androidx.compose.ui:ui")
-    implementation("androidx.compose.material3:material3")
-    implementation("androidx.compose.material:material-icons-extended")
-    implementation("androidx.compose.ui:ui-tooling-preview")
-    implementation("androidx.activity:activity-compose:1.9.2")
-    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.6")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
-    implementation("com.bytedance:bytehook:1.0.10")
-    implementation("org.apache.commons:commons-compress:1.27.1")
-    implementation("org.tukaani:xz:1.10")
+    implementation(project(":core:model"))
+    implementation(project(":core:github"))
+
+    implementation(libs.androidx.core.ktx)
+    implementation(libs.androidx.activity.compose)
+    implementation(platform(libs.compose.bom))
+    implementation(libs.compose.ui)
+    implementation(libs.compose.material3)
+    implementation(libs.compose.material.icons.core)
+    implementation(libs.compose.ui.tooling.preview)
+    implementation(libs.lifecycle.viewmodel.compose)
+    implementation(libs.lifecycle.runtime.compose)
+
+    testImplementation(libs.junit)
 }
